@@ -242,6 +242,12 @@ function attachQuizListeners() {
   document.getElementById('submit')?.addEventListener('click', submitAnswer);
 }
 
+function formatCoord(value: number, type: 'lat' | 'lon'): string {
+  const abs = Math.abs(value).toFixed(2);
+  if (type === 'lat') return `${abs}°${value >= 0 ? 'N' : 'S'}`;
+  return `${abs}°${value >= 0 ? 'E' : 'W'}`;
+}
+
 function renderResult(isLastAnswerCorrect?: boolean) {
   if (!currentQuestion) return;
 
@@ -254,17 +260,6 @@ function renderResult(isLastAnswerCorrect?: boolean) {
   const cityB = currentQuestion.cityB;
   const wikiA = `https://${lang}.wikipedia.org/wiki/${lang === 'ja' ? cityA.capitalJp : cityA.capitalEn}`;
   const wikiB = `https://${lang}.wikipedia.org/wiki/${lang === 'ja' ? cityB.capitalJp : cityB.capitalEn}`;
-
-  // Show "Correct answer is ..." if the user was wrong OR if we just want to reinforce learning.
-  // Usually if correct, "North East" is displayed as title or implied.
-  // Let's show it always for clarity.
-  // Or only if incorrect?
-  // User wants "Answer page", so map is key. Text confirmation is helpful.
-
-  const wikiLabelA =
-    lang === 'ja' ? `${cityA.capitalJp} (${cityA.nameJp})` : `${cityA.capitalEn} (${cityA.nameEn})`;
-  const wikiLabelB =
-    lang === 'ja' ? `${cityB.capitalJp} (${cityB.nameJp})` : `${cityB.capitalEn} (${cityB.nameEn})`;
 
   const mapLabelA = lang === 'ja' ? cityA.capitalJp : cityA.capitalEn;
   const mapLabelB = lang === 'ja' ? cityB.capitalJp : cityB.capitalEn;
@@ -280,9 +275,21 @@ function renderResult(isLastAnswerCorrect?: boolean) {
 
       <div id="map" class="map-container"></div>
 
-      <div class="wiki-links">
-        <a href="${wikiA}" target="_blank" class="wiki-link">${wikiLabelA}</a>
-        <a href="${wikiB}" target="_blank" class="wiki-link">${wikiLabelB}</a>
+      <div class="city-info-cards">
+        <div class="city-info-card">
+          <span class="city-info-role target-role">Target</span>
+          <span class="city-info-name">${lang === 'ja' ? cityA.capitalJp : cityA.capitalEn}</span>
+          <span class="city-info-country">${lang === 'ja' ? cityA.nameJp : cityA.nameEn}</span>
+          <span class="city-info-coords">${formatCoord(cityA.lat, 'lat')} / ${formatCoord(cityA.lon, 'lon')}</span>
+          <a href="${wikiA}" target="_blank" class="city-info-wiki">Wikipedia ↗</a>
+        </div>
+        <div class="city-info-card">
+          <span class="city-info-role origin-role">Origin</span>
+          <span class="city-info-name">${lang === 'ja' ? cityB.capitalJp : cityB.capitalEn}</span>
+          <span class="city-info-country">${lang === 'ja' ? cityB.nameJp : cityB.nameEn}</span>
+          <span class="city-info-coords">${formatCoord(cityB.lat, 'lat')} / ${formatCoord(cityB.lon, 'lon')}</span>
+          <a href="${wikiB}" target="_blank" class="city-info-wiki">Wikipedia ↗</a>
+        </div>
       </div>
 
       <button id="action-btn" class="action-btn">

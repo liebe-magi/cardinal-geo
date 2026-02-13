@@ -401,22 +401,83 @@ h1 {
   overflow: hidden;
 }
 
-.wiki-links {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
+/* City Info Cards */
+.city-info-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
-.wiki-link {
-  color: var(--text-secondary);
-  text-decoration: none;
-  border-bottom: 1px dotted var(--text-secondary);
+.city-info-card {
+  background: #2c2c2c;
+  border: 1px solid #444;
+  border-radius: 10px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  transition: border-color 0.2s;
 }
 
-.wiki-link:hover {
+.city-info-card:hover {
+  border-color: #666;
+}
+
+.city-info-role {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.target-role {
   color: var(--primary-color);
-  border-bottom-style: solid;
+  background: rgba(0, 188, 212, 0.12);
+}
+
+.origin-role {
+  color: var(--secondary-color);
+  background: rgba(255, 64, 129, 0.12);
+}
+
+.city-info-name {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.city-info-country {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.city-info-coords {
+  font-size: 0.7rem;
+  color: var(--accent-color);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+.city-info-wiki {
+  font-size: 0.7rem;
+  color: var(--primary-color);
+  text-decoration: none;
+  border: 1px solid rgba(0, 188, 212, 0.3);
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-top: 0.2rem;
+  transition: all 0.2s;
+}
+
+.city-info-wiki:hover {
+  background: rgba(0, 188, 212, 0.15);
+  border-color: var(--primary-color);
 }
 
 .action-btn {
