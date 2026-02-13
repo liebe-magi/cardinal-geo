@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Lockfile
+bun.lock
+
+# Source CSV (generated cities.ts is committed instead)
+r0711world_utf8.csv
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
