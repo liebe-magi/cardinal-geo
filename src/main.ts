@@ -1,7 +1,22 @@
 import L from 'leaflet';
+import { cities } from './cities';
 import { getTranslation, Lang } from './i18n';
-import { GameMode, GameState, getHighScore, saveHighScore } from './modes';
-import { formatDirection, generateQuestion, QuadDirection, Question } from './quiz';
+import {
+  GameMode,
+  GameState,
+  getHighScore,
+  getWeaknessScores,
+  resetWeaknessScores,
+  saveHighScore,
+  updateWeaknessScore,
+} from './modes';
+import {
+  formatDirection,
+  generateLearningQuestion,
+  generateQuestion,
+  QuadDirection,
+  Question,
+} from './quiz';
 import './style.css';
 
 // State
@@ -20,6 +35,7 @@ let userGuess: QuadDirection = { ns: 'N', ew: 'E' };
 let timerId: ReturnType<typeof setInterval> | null = null;
 let map: L.Map | null = null;
 let isShowingResult = false;
+let isWeaknessScreen = false;
 
 // DOM Elements
 const app = document.getElementById('app')!;
@@ -36,7 +52,9 @@ function t() {
 function setLang(l: Lang) {
   lang = l;
   localStorage.setItem('cardinal_lang', l);
-  if (currentMode) {
+  if (isWeaknessScreen) {
+    renderWeaknessCheck();
+  } else if (currentMode) {
     // If in game, just re-render current state
     if (gameState.isGameOver) renderFinalResult();
     else if (isShowingResult) renderResult();
@@ -59,23 +77,26 @@ function renderHeader() {
 
 function renderModeSelect() {
   document.title = `${t().appTitle}`;
+  isWeaknessScreen = false;
   app.innerHTML = `
     ${renderHeader()}
     <div class="scene">
       <div class="mode-grid">
-        ${['survival', 'timeAttack', 'challenge']
+        ${['survival', 'timeAttack', 'challenge', 'learning']
           .map((m) => {
             const mode = m as GameMode;
+            const showHighScore = mode !== 'learning';
             return `
             <button class="mode-btn" data-mode="${mode}">
               <span class="mode-title">${t().modes[mode]}</span>
               <span class="mode-desc">${t().modeDesc[mode]}</span>
-              <span class="high-score">${t().ui.highScore}: ${getHighScore(mode)}</span>
+              ${showHighScore ? `<span class="high-score">${t().ui.highScore}: ${getHighScore(mode)}</span>` : ''}
             </button>
           `;
           })
           .join('')}
       </div>
+      <button id="weakness-check-btn" class="weakness-check-btn">${t().ui.weaknessCheck}</button>
     </div>
   `;
 
@@ -84,6 +105,9 @@ function renderModeSelect() {
     ?.addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
   document.querySelectorAll('.mode-btn').forEach((btn) => {
     btn.addEventListener('click', () => startGame((btn as HTMLElement).dataset.mode as GameMode));
+  });
+  document.getElementById('weakness-check-btn')?.addEventListener('click', () => {
+    renderWeaknessCheck();
   });
 }
 
@@ -144,8 +168,7 @@ function renderQuiz() {
     statsBar.innerHTML = `
       <span>${t().ui.score}: ${gameState.score}</span>
       ${gameState.mode === 'timeAttack' ? `<span>${t().ui.time}: ${gameState.timeLeft}s</span>` : ''}
-      ${gameState.mode === 'challenge' ? `<span>${t().ui.question}: ${gameState.questionCount + 1}/10</span>` : ''}
-    `;
+      ${gameState.mode === 'challenge' ? `<span>${t().ui.question}: ${gameState.questionCount + 1}/10</span>` : ''}        ${gameState.mode === 'learning' ? `<span>${t().ui.question}: ${gameState.questionCount + 1}</span>` : ''}    `;
   } else {
     // CREATE new elements
     const stats = `
@@ -153,6 +176,7 @@ function renderQuiz() {
         <span>${t().ui.score}: ${gameState.score}</span>
         ${gameState.mode === 'timeAttack' ? `<span>${t().ui.time}: ${gameState.timeLeft}s</span>` : ''}
         ${gameState.mode === 'challenge' ? `<span>${t().ui.question}: ${gameState.questionCount + 1}/10</span>` : ''}
+        ${gameState.mode === 'learning' ? `<span>${t().ui.question}: ${gameState.questionCount + 1}</span>` : ''}
       </div>
     `;
 
@@ -359,6 +383,7 @@ function renderResult(isLastAnswerCorrect?: boolean) {
       // Challenge: 10 questions done -> end game
       endGame();
     } else {
+      // Learning mode and other cases: just go to next question
       nextQuestion();
     }
   });
@@ -420,7 +445,11 @@ function stopTimer() {
 
 function nextQuestion() {
   isShowingResult = false;
-  currentQuestion = generateQuestion();
+  if (currentMode === 'learning') {
+    currentQuestion = generateLearningQuestion(getWeaknessScores());
+  } else {
+    currentQuestion = generateQuestion();
+  }
   // Randomize initial guess
   userGuess = {
     ns: Math.random() > 0.5 ? 'N' : 'S',
@@ -449,6 +478,9 @@ function submitAnswer() {
   });
   isShowingResult = true;
 
+  // Update weakness scores for all modes
+  updateWeaknessScore(currentQuestion.cityA, currentQuestion.cityB, isCorrect);
+
   if (isCorrect) {
     gameState.score++;
 
@@ -463,6 +495,9 @@ function submitAnswer() {
       startTimer();
       nextQuestion();
       return;
+    } else if (gameState.mode === 'learning') {
+      // Learning mode: always show result, continue indefinitely
+      renderResult(true);
     } else {
       // Challenge
       if (gameState.questionCount >= 10) {
@@ -484,6 +519,9 @@ function submitAnswer() {
       startTimer();
       nextQuestion();
       return;
+    } else if (gameState.mode === 'learning') {
+      // Learning mode: always show result, continue indefinitely
+      renderResult(false);
     } else {
       // Challenge
       if (gameState.questionCount >= 10) {
@@ -688,6 +726,176 @@ function renderFinalResult() {
       }
     });
   });
+}
+
+// --- Weakness Check Screen ---
+
+function getScoreColor(score: number): string {
+  // Smooth HSL gradient: green(120°) → yellow(60°) → orange(30°) → red(0°)
+  // score ≤ 0 → hue 120 (green), score ≥ 6 → hue 0 (red)
+  const clamped = Math.max(0, Math.min(6, score));
+  const hue = 120 - (clamped / 6) * 120; // 120 → 0
+  const saturation = 70 + (clamped / 6) * 15; // 70% → 85%
+  const lightness = 45 + (clamped / 6) * 5; // 45% → 50%
+  return `hsl(${Math.round(hue)}, ${Math.round(saturation)}%, ${Math.round(lightness)}%)`;
+}
+
+function getMarkerRadius(score: number): number {
+  return Math.max(4, Math.min(18, 4 + Math.abs(score) * 1.5));
+}
+
+function renderWeaknessCheck() {
+  if (map) {
+    map.remove();
+    map = null;
+  }
+
+  isWeaknessScreen = true;
+  currentMode = null;
+
+  const scores = getWeaknessScores();
+  // Build city list sorted by score descending
+  const cityScores = cities.map((c) => ({
+    city: c,
+    score: scores[c.countryCode] || 0,
+  }));
+  cityScores.sort((a, b) => b.score - a.score);
+
+  const tableRows = cityScores
+    .map((cs) => {
+      const name = lang === 'ja' ? cs.city.nameJp : cs.city.nameEn;
+      const capital = lang === 'ja' ? cs.city.capitalJp : cs.city.capitalEn;
+      const color = getScoreColor(cs.score);
+      return `<tr>
+        <td>${name}</td>
+        <td>${capital}</td>
+        <td><span class="score-badge" style="color:${color};border-color:${color}">${cs.score}</span></td>
+      </tr>`;
+    })
+    .join('');
+
+  app.innerHTML = `
+    ${renderHeader()}
+    <div class="scene weakness-scene">
+      <h2 class="weakness-title">${t().ui.weaknessTitle}</h2>
+
+      <div class="tab-container">
+        <button class="tab-btn active" data-tab="map">${t().ui.weaknessMap}</button>
+        <button class="tab-btn" data-tab="list">${t().ui.weaknessList}</button>
+      </div>
+
+      <div id="tab-map" class="tab-content active">
+        <div id="weakness-map" class="weakness-map"></div>
+        <div class="weakness-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(120,70%,45%)"></span> ≤0</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(80,73%,46%)"></span> 1</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(60,75%,47%)"></span> 2</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(40,78%,48%)"></span> 3</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(20,82%,49%)"></span> 4-5</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(0,85%,50%)"></span> ≥6</span>
+        </div>
+      </div>
+
+      <div id="tab-list" class="tab-content">
+        <div class="weakness-table-wrap">
+          <table class="weakness-table">
+            <thead>
+              <tr>
+                <th>${t().ui.country}</th>
+                <th>${t().ui.capital}</th>
+                <th>${t().ui.weaknessScore}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="weakness-actions">
+        <button id="weakness-reset-btn" class="action-btn reset-btn">${t().ui.weaknessReset}</button>
+        <button id="weakness-home-btn" class="action-btn secondary-btn">${t().ui.backToTop}</button>
+      </div>
+    </div>
+  `;
+
+  // Init map
+  setTimeout(() => {
+    const mapContainer = document.getElementById('weakness-map');
+    if (!mapContainer) return;
+
+    map = L.map(mapContainer, {
+      worldCopyJump: false,
+      maxBounds: [
+        [-90, -180],
+        [90, 180],
+      ],
+      maxBoundsViscosity: 1.0,
+    }).setView([20, 0], 2);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      noWrap: true,
+    }).addTo(map);
+
+    // Add circle markers for each city
+    for (const cs of cityScores) {
+      const color = getScoreColor(cs.score);
+      const radius = getMarkerRadius(cs.score);
+      const name = lang === 'ja' ? cs.city.nameJp : cs.city.nameEn;
+      const capital = lang === 'ja' ? cs.city.capitalJp : cs.city.capitalEn;
+
+      L.circleMarker([cs.city.lat, cs.city.lon], {
+        radius,
+        color,
+        fillColor: color,
+        fillOpacity: 0.6,
+        weight: 1,
+      })
+        .addTo(map!)
+        .bindPopup(
+          `<strong>${capital}</strong><br>${name}<br>${t().ui.weaknessScore}: ${cs.score}`,
+        );
+    }
+  }, 100);
+
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tab = (btn as HTMLElement).dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${tab}`)?.classList.add('active');
+      // Invalidate map size when switching to map tab
+      if (tab === 'map' && map) {
+        setTimeout(() => map?.invalidateSize(), 50);
+      }
+    });
+  });
+
+  // Reset button
+  document.getElementById('weakness-reset-btn')?.addEventListener('click', () => {
+    if (confirm(t().ui.weaknessResetConfirm)) {
+      resetWeaknessScores();
+      renderWeaknessCheck();
+    }
+  });
+
+  // Home button
+  document.getElementById('weakness-home-btn')?.addEventListener('click', () => {
+    if (map) {
+      map.remove();
+      map = null;
+    }
+    isWeaknessScreen = false;
+    init();
+  });
+
+  document
+    .getElementById('lang-toggle')
+    ?.addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
 }
 
 function endGame() {
