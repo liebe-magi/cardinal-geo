@@ -69,13 +69,26 @@ function setLang(l: Lang) {
 function renderHeader() {
   return `
     <header>
-      <div class="header-title">
+      <div class="header-title" id="header-home" style="cursor:pointer">
         <h1>${t().appTitle}</h1>
         <span class="version-badge">v${__APP_VERSION__}</span>
       </div>
       <button id="lang-toggle" class="lang-toggle">${lang === 'ja' ? 'EN' : 'JP'}</button>
     </header>
   `;
+}
+
+function attachHeaderHomeListener() {
+  document.getElementById('header-home')?.addEventListener('click', () => {
+    if (timerId) {
+      clearInterval(timerId);
+      timerId = null;
+    }
+    currentMode = null;
+    isShowingResult = false;
+    isWeaknessScreen = false;
+    init();
+  });
 }
 
 function renderModeSelect() {
@@ -106,6 +119,7 @@ function renderModeSelect() {
   document
     .getElementById('lang-toggle')
     ?.addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
+  attachHeaderHomeListener();
   document.querySelectorAll('.mode-btn').forEach((btn) => {
     btn.addEventListener('click', () => startGame((btn as HTMLElement).dataset.mode as GameMode));
   });
@@ -163,23 +177,25 @@ function renderQuiz() {
 
     textInfoEl.innerHTML =
       lang === 'ja'
-        ? `<span style="color:var(--primary-color)">${cityA.capitalJp}</span> ${t().ui.is}
-         <span style="color:var(--secondary-color)">${cityB.capitalJp}</span> ${t().ui.of} ...`
-        : `<span style="color:var(--primary-color)">${cityA.capitalEn}</span> ${t().ui.is} ...
-         ${t().ui.of} <span style="color:var(--secondary-color)">${cityB.capitalEn}</span>`;
+        ? `<span class="city-badge city-badge-target">${cityA.capitalJp}</span> ${t().ui.is}
+         <span class="city-badge city-badge-origin">${cityB.capitalJp}</span> ${t().ui.of} ...`
+        : `<span class="city-badge city-badge-target">${cityA.capitalEn}</span> ${t().ui.is} ...
+         ${t().ui.of} <span class="city-badge city-badge-origin">${cityB.capitalEn}</span>`;
 
     statsBar.innerHTML = `
-      <span>${t().ui.score}: ${gameState.score}</span>
-      ${gameState.mode === 'timeAttack' ? `<span>${t().ui.time}: ${gameState.timeLeft}s</span>` : ''}
-      ${gameState.mode === 'challenge' ? `<span>${t().ui.question}: ${gameState.questionCount + 1}/10</span>` : ''}        ${gameState.mode === 'learning' ? `<span>${t().ui.question}: ${gameState.questionCount + 1}</span>` : ''}    `;
+      <span class="stat-badge"><span class="stat-icon">⭐</span><span class="stat-value">${gameState.score}</span></span>
+      ${gameState.mode === 'timeAttack' ? `<span class="stat-badge stat-badge-time"><span class="stat-icon">⏱</span><span class="stat-value">${gameState.timeLeft}s</span></span>` : ''}
+      ${gameState.mode === 'challenge' ? `<span class="stat-badge"><span class="stat-icon">📋</span><span class="stat-value">${gameState.questionCount + 1}/10</span></span>` : ''}
+      ${gameState.mode === 'learning' ? `<span class="stat-badge"><span class="stat-icon">📋</span><span class="stat-value">${gameState.questionCount + 1}</span></span>` : ''}
+    `;
   } else {
     // CREATE new elements
     const stats = `
       <div id="stats-bar" class="stats-bar">
-        <span>${t().ui.score}: ${gameState.score}</span>
-        ${gameState.mode === 'timeAttack' ? `<span>${t().ui.time}: ${gameState.timeLeft}s</span>` : ''}
-        ${gameState.mode === 'challenge' ? `<span>${t().ui.question}: ${gameState.questionCount + 1}/10</span>` : ''}
-        ${gameState.mode === 'learning' ? `<span>${t().ui.question}: ${gameState.questionCount + 1}</span>` : ''}
+        <span class="stat-badge"><span class="stat-icon">⭐</span><span class="stat-value">${gameState.score}</span></span>
+        ${gameState.mode === 'timeAttack' ? `<span class="stat-badge stat-badge-time"><span class="stat-icon">⏱</span><span class="stat-value">${gameState.timeLeft}s</span></span>` : ''}
+        ${gameState.mode === 'challenge' ? `<span class="stat-badge"><span class="stat-icon">📋</span><span class="stat-value">${gameState.questionCount + 1}/10</span></span>` : ''}
+        ${gameState.mode === 'learning' ? `<span class="stat-badge"><span class="stat-icon">📋</span><span class="stat-value">${gameState.questionCount + 1}</span></span>` : ''}
       </div>
     `;
 
@@ -216,13 +232,13 @@ function renderQuiz() {
 
     const textInfo =
       lang === 'ja'
-        ? `<div id="text-info" style="text-align:center; margin-bottom:0.5rem">
-           <span style="color:var(--primary-color)">${cityA.capitalJp}</span> ${t().ui.is}
-           <span style="color:var(--secondary-color)">${cityB.capitalJp}</span> ${t().ui.of} ...
+        ? `<div id="text-info" class="question-text">
+           <span class="city-badge city-badge-target">${cityA.capitalJp}</span> ${t().ui.is}
+           <span class="city-badge city-badge-origin">${cityB.capitalJp}</span> ${t().ui.of} ...
          </div>`
-        : `<div id="text-info" style="text-align:center; margin-bottom:0.5rem">
-           <span style="color:var(--primary-color)">${cityA.capitalEn}</span> ${t().ui.is} ...
-           ${t().ui.of} <span style="color:var(--secondary-color)">${cityB.capitalEn}</span>
+        : `<div id="text-info" class="question-text">
+           <span class="city-badge city-badge-target">${cityA.capitalEn}</span> ${t().ui.is} ...
+           ${t().ui.of} <span class="city-badge city-badge-origin">${cityB.capitalEn}</span>
          </div>`;
 
     app.innerHTML = `
@@ -255,6 +271,7 @@ function attachQuizListeners() {
   document
     .getElementById('lang-toggle')
     ?.addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
+  attachHeaderHomeListener();
 
   // Quadrant clicks
   document.querySelectorAll('.quadrant-btn').forEach((btn) => {
@@ -399,6 +416,7 @@ function renderResult(isLastAnswerCorrect?: boolean) {
   document
     .getElementById('lang-toggle')
     ?.addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
+  attachHeaderHomeListener();
 }
 
 // --- Logic ---
@@ -433,8 +451,8 @@ function startTimer() {
           const stats = document.querySelector('.stats-bar');
           if (stats)
             stats.innerHTML = `
-            <span>${t().ui.score}: ${gameState.score}</span>
-            <span>${t().ui.time}: ${gameState.timeLeft}s</span>
+            <span class="stat-badge"><span class="stat-icon">⭐</span><span class="stat-value">${gameState.score}</span></span>
+            <span class="stat-badge stat-badge-time"><span class="stat-icon">⏱</span><span class="stat-value">${gameState.timeLeft}s</span></span>
           `;
         }
       }
@@ -676,6 +694,7 @@ function renderFinalResult() {
   document
     .getElementById('lang-toggle')
     ?.addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
+  attachHeaderHomeListener();
 
   // Accordion map lazy loading
   const accordionMaps = new Map<number, L.Map>();
@@ -899,6 +918,7 @@ function renderWeaknessCheck() {
   document
     .getElementById('lang-toggle')
     ?.addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
+  attachHeaderHomeListener();
 }
 
 function endGame() {

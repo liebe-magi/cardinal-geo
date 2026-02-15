@@ -119,10 +119,10 @@ export const translations = {
       weaknessScore: 'Weakness',
     },
     directions: {
-      N: 'North',
-      S: 'South',
-      E: 'East',
-      W: 'West',
+      N: 'N',
+      S: 'S',
+      E: 'E',
+      W: 'W',
     },
   },
 };
