@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="64" fill="#121212"/>
+  <g transform="translate(256,256)">
+    <!-- Compass circle -->
+    <circle r="200" fill="none" stroke="#00bcd4" stroke-width="16"/>
+    <!-- N arrow -->
+    <polygon points="0,-180 -30,-60 0,-80 30,-60" fill="#ff4081"/>
+    <!-- S arrow -->
+    <polygon points="0,180 -30,60 0,80 30,60" fill="#e0e0e0"/>
+    <!-- E arrow -->
+    <polygon points="180,0 60,-30 80,0 60,30" fill="#e0e0e0"/>
+    <!-- W arrow -->
+    <polygon points="-180,0 -60,-30 -80,0 -60,30" fill="#e0e0e0"/>
+    <!-- Center dot -->
+    <circle r="16" fill="#ffc107"/>
+  </g>
+</svg>

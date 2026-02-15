@@ -43,12 +43,28 @@ header {
   margin-bottom: 2rem;
 }
 
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 h1 {
   margin: 0;
   font-size: 1.5rem;
   color: var(--primary-color);
   font-weight: 700;
   letter-spacing: 1px;
+}
+
+.version-badge {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  background: var(--surface-color);
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--text-secondary);
+  white-space: nowrap;
 }
 
 .lang-toggle {

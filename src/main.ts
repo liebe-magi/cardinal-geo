@@ -69,7 +69,10 @@ function setLang(l: Lang) {
 function renderHeader() {
   return `
     <header>
-      <h1>${t().appTitle}</h1>
+      <div class="header-title">
+        <h1>${t().appTitle}</h1>
+        <span class="version-badge">v${__APP_VERSION__}</span>
+      </div>
       <button id="lang-toggle" class="lang-toggle">${lang === 'ja' ? 'EN' : 'JP'}</button>
     </header>
   `;
