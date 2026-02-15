@@ -13,6 +13,7 @@ let gameState: GameState = {
   questionCount: 0,
   isGameOver: false,
   history: [],
+  questionHistory: [],
 };
 let currentQuestion: Question | null = null;
 let userGuess: QuadDirection = { ns: 'N', ew: 'E' };
@@ -252,9 +253,9 @@ function renderResult(isLastAnswerCorrect?: boolean) {
   if (!currentQuestion) return;
 
   const titleText = isLastAnswerCorrect ? t().ui.correct : t().ui.incorrect;
-  const titleClass = isLastAnswerCorrect ? 'result-correct' : 'result-incorrect';
 
   const correctDir = formatDirection(currentQuestion.correctDirection, lang);
+  const userDir = formatDirection(userGuess, lang);
 
   const cityA = currentQuestion.cityA;
   const cityB = currentQuestion.cityB;
@@ -267,10 +268,25 @@ function renderResult(isLastAnswerCorrect?: boolean) {
   app.innerHTML = `
     ${renderHeader()}
     <div class="scene">
-      <div class="result-header">
-        <h2 class="${titleClass}">${titleText}</h2>
-        <p>${t().ui.score}: ${gameState.score}</p>
-        <p>${t().ui.correct}: ${correctDir}</p>
+      <div class="result-banner ${isLastAnswerCorrect ? 'result-banner-correct' : 'result-banner-incorrect'}">
+        <span class="result-banner-icon">${isLastAnswerCorrect ? '○' : '✕'}</span>
+        <span class="result-banner-text">${titleText}</span>
+      </div>
+
+      <div class="result-score-badge">
+        <span class="result-score-label">${t().ui.score}</span>
+        <span class="result-score-num">${gameState.score}</span>
+      </div>
+
+      <div class="result-direction-cards">
+        <div class="result-dir-card">
+          <span class="result-dir-card-label">${t().ui.correctAnswer}</span>
+          <span class="result-dir-card-value result-correct">${correctDir}</span>
+        </div>
+        <div class="result-dir-card">
+          <span class="result-dir-card-label">${t().ui.yourAnswer}</span>
+          <span class="result-dir-card-value ${isLastAnswerCorrect ? 'result-correct' : 'result-incorrect'}">${userDir}</span>
+        </div>
       </div>
 
       <div id="map" class="map-container"></div>
@@ -368,6 +384,7 @@ function startGame(mode: GameMode) {
     isGameOver: false,
     timeLeft: mode === 'timeAttack' ? 60 : undefined,
     history: [],
+    questionHistory: [],
   };
 
   isShowingResult = false; // Reset view state
@@ -423,6 +440,13 @@ function submitAnswer() {
 
   gameState.questionCount++;
   gameState.history.push(isCorrect);
+  gameState.questionHistory.push({
+    cityA: currentQuestion.cityA,
+    cityB: currentQuestion.cityB,
+    correctDirection: { ...correct },
+    userAnswer: { ...userGuess },
+    isCorrect,
+  });
   isShowingResult = true;
 
   if (isCorrect) {
@@ -535,6 +559,67 @@ function renderFinalResult() {
 
         <div class="history-row">${historyHtml}</div>
 
+        ${
+          gameState.questionHistory.length > 0
+            ? `
+        <div class="accordion-section">
+          <h3 class="accordion-section-title">${t().ui.reviewAnswers}</h3>
+          ${gameState.questionHistory
+            .map((q, i) => {
+              const cityA = q.cityA;
+              const cityB = q.cityB;
+              const nameA = lang === 'ja' ? cityA.capitalJp : cityA.capitalEn;
+              const nameB = lang === 'ja' ? cityB.capitalJp : cityB.capitalEn;
+              const countryA = lang === 'ja' ? cityA.nameJp : cityA.nameEn;
+              const countryB = lang === 'ja' ? cityB.nameJp : cityB.nameEn;
+              const correctDirText = formatDirection(q.correctDirection, lang);
+              const userDirText = formatDirection(q.userAnswer, lang);
+              const wikiA = `https://${lang}.wikipedia.org/wiki/${lang === 'ja' ? cityA.capitalJp : cityA.capitalEn}`;
+              const wikiB = `https://${lang}.wikipedia.org/wiki/${lang === 'ja' ? cityB.capitalJp : cityB.capitalEn}`;
+              return `
+            <details class="accordion-item" data-index="${i}">
+              <summary class="accordion-summary">
+                <span class="accordion-q">Q${i + 1}</span>
+                <span class="accordion-result-icon ${q.isCorrect ? 'history-correct' : 'history-incorrect'}">${q.isCorrect ? '○' : '✕'}</span>
+                <span class="accordion-cities">${nameA} → ${nameB}</span>
+              </summary>
+              <div class="accordion-content">
+                <div class="accordion-direction-info">
+                  <div class="accordion-dir-item">
+                    <span class="accordion-dir-label">${t().ui.correctAnswer}</span>
+                    <span class="accordion-dir-value result-correct">${correctDirText}</span>
+                  </div>
+                  <div class="accordion-dir-item">
+                    <span class="accordion-dir-label">${t().ui.yourAnswer}</span>
+                    <span class="accordion-dir-value ${q.isCorrect ? 'result-correct' : 'result-incorrect'}">${userDirText}</span>
+                  </div>
+                </div>
+                <div id="accordion-map-${i}" class="accordion-map"></div>
+                <div class="city-info-cards">
+                  <div class="city-info-card">
+                    <span class="city-info-role target-role">Target</span>
+                    <span class="city-info-name">${nameA}</span>
+                    <span class="city-info-country">${countryA}</span>
+                    <span class="city-info-coords">${formatCoord(cityA.lat, 'lat')} / ${formatCoord(cityA.lon, 'lon')}</span>
+                    <a href="${wikiA}" target="_blank" class="city-info-wiki">Wikipedia ↗</a>
+                  </div>
+                  <div class="city-info-card">
+                    <span class="city-info-role origin-role">Origin</span>
+                    <span class="city-info-name">${nameB}</span>
+                    <span class="city-info-country">${countryB}</span>
+                    <span class="city-info-coords">${formatCoord(cityB.lat, 'lat')} / ${formatCoord(cityB.lon, 'lon')}</span>
+                    <a href="${wikiB}" target="_blank" class="city-info-wiki">Wikipedia ↗</a>
+                  </div>
+                </div>
+              </div>
+            </details>`;
+            })
+            .join('')}
+        </div>
+        `
+            : ''
+        }
+
         <button id="retry-btn" class="action-btn">${t().ui.retry}</button>
         <button id="home-btn" class="action-btn secondary-btn">${t().ui.backToTop}</button>
       </div>
@@ -550,6 +635,59 @@ function renderFinalResult() {
   document
     .getElementById('lang-toggle')
     ?.addEventListener('click', () => setLang(lang === 'ja' ? 'en' : 'ja'));
+
+  // Accordion map lazy loading
+  const accordionMaps = new Map<number, L.Map>();
+
+  document.querySelectorAll<HTMLDetailsElement>('.accordion-item').forEach((details) => {
+    const index = parseInt(details.dataset.index || '0', 10);
+
+    details.addEventListener('toggle', () => {
+      if (details.open) {
+        // Initialize map when accordion opens
+        const mapContainer = document.getElementById(`accordion-map-${index}`);
+        if (mapContainer && !accordionMaps.has(index)) {
+          const q = gameState.questionHistory[index];
+          if (!q) return;
+
+          const accMap = L.map(mapContainer, {
+            worldCopyJump: false,
+            maxBounds: [
+              [-90, -180],
+              [90, 180],
+            ],
+            maxBoundsViscosity: 1.0,
+          }).setView([0, 0], 2);
+
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            noWrap: true,
+          }).addTo(accMap);
+
+          const latlngA: [number, number] = [q.cityA.lat, q.cityA.lon];
+          const latlngB: [number, number] = [q.cityB.lat, q.cityB.lon];
+          const labelA = lang === 'ja' ? q.cityA.capitalJp : q.cityA.capitalEn;
+          const labelB = lang === 'ja' ? q.cityB.capitalJp : q.cityB.capitalEn;
+
+          L.marker(latlngA).addTo(accMap).bindPopup(`${labelA}<br>(Target)`);
+          L.marker(latlngB).addTo(accMap).bindPopup(`${labelB}<br>(Origin)`);
+          L.polyline([latlngA, latlngB], { color: 'red' }).addTo(accMap);
+
+          const group = new L.FeatureGroup([L.marker(latlngA), L.marker(latlngB)]);
+          accMap.fitBounds(group.getBounds().pad(0.1));
+
+          accordionMaps.set(index, accMap);
+        }
+      } else {
+        // Clean up map when accordion closes
+        const accMap = accordionMaps.get(index);
+        if (accMap) {
+          accMap.remove();
+          accordionMaps.delete(index);
+        }
+      }
+    });
+  });
 }
 
 function endGame() {

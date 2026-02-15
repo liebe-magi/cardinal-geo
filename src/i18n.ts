@@ -40,6 +40,9 @@ export const translations = {
       timesUp: 'タイムアップ！',
       gameOver: 'ゲームオーバー',
       challengeComplete: 'チャレンジ完了！',
+      reviewAnswers: '回答詳細',
+      yourAnswer: 'あなたの回答',
+      correctAnswer: '正解',
     },
     directions: {
       N: '北',
@@ -87,6 +90,9 @@ export const translations = {
       timesUp: "Time's Up!",
       gameOver: 'Game Over',
       challengeComplete: 'Challenge Complete!',
+      reviewAnswers: 'Answer Details',
+      yourAnswer: 'Your Answer',
+      correctAnswer: 'Correct',
     },
     directions: {
       N: 'North',

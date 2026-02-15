@@ -1,4 +1,15 @@
+import { City } from './cities';
+import { QuadDirection } from './quiz';
+
 export type GameMode = 'survival' | 'timeAttack' | 'challenge';
+
+export interface QuestionRecord {
+  cityA: City;
+  cityB: City;
+  correctDirection: QuadDirection;
+  userAnswer: QuadDirection;
+  isCorrect: boolean;
+}
 
 export interface GameState {
   mode: GameMode;
@@ -7,6 +18,7 @@ export interface GameState {
   isGameOver: boolean;
   timeLeft?: number; // for timeAttack
   history: boolean[]; // Correct/Incorrect history
+  questionHistory: QuestionRecord[]; // Detailed question history
 }
 
 export const STORAGE_KEYS = {
