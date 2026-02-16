@@ -753,12 +753,22 @@ function renderFinalResult() {
 // --- Weakness Check Screen ---
 
 function getScoreColor(score: number): string {
-  // Smooth HSL gradient: green(120°) → yellow(60°) → orange(30°) → red(0°)
-  // score ≤ 0 → hue 120 (green), score ≥ 6 → hue 0 (red)
-  const clamped = Math.max(0, Math.min(6, score));
-  const hue = 120 - (clamped / 6) * 120; // 120 → 0
-  const saturation = 70 + (clamped / 6) * 15; // 70% → 85%
-  const lightness = 45 + (clamped / 6) * 5; // 45% → 50%
+  // Piecewise HSL gradient: green(120°) → yellow(60°) → red(0°)
+  // score ≤ -10 → hue 120 (green), score 0 → hue 60 (yellow), score ≥ 10 → hue 0 (red)
+  const clamped = Math.max(-10, Math.min(10, score));
+  let hue: number;
+  if (clamped <= 0) {
+    // [-10, 0] → hue [120, 60]
+    const t = (clamped + 10) / 10; // 0 → 1
+    hue = 120 - t * 60;
+  } else {
+    // [0, 10] → hue [60, 0]
+    const t = clamped / 10; // 0 → 1
+    hue = 60 - t * 60;
+  }
+  const norm = (clamped + 10) / 20; // 0 → 1 over [-10, 10]
+  const saturation = 70 + norm * 15; // 70% → 85%
+  const lightness = 45 + norm * 5; // 45% → 50%
   return `hsl(${Math.round(hue)}, ${Math.round(saturation)}%, ${Math.round(lightness)}%)`;
 }
 
@@ -809,12 +819,12 @@ function renderWeaknessCheck() {
       <div id="tab-map" class="tab-content active">
         <div id="weakness-map" class="weakness-map"></div>
         <div class="weakness-legend">
-          <span class="legend-item"><span class="legend-dot" style="background:hsl(120,70%,45%)"></span> ≤0</span>
-          <span class="legend-item"><span class="legend-dot" style="background:hsl(80,73%,46%)"></span> 1</span>
-          <span class="legend-item"><span class="legend-dot" style="background:hsl(60,75%,47%)"></span> 2</span>
-          <span class="legend-item"><span class="legend-dot" style="background:hsl(40,78%,48%)"></span> 3</span>
-          <span class="legend-item"><span class="legend-dot" style="background:hsl(20,82%,49%)"></span> 4-5</span>
-          <span class="legend-item"><span class="legend-dot" style="background:hsl(0,85%,50%)"></span> ≥6</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(120,70%,45%)"></span> ≤-10</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(90,74%,46%)"></span> -5</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(60,78%,48%)"></span> 0</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(42,80%,49%)"></span> 3</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(24,83%,49%)"></span> 6</span>
+          <span class="legend-item"><span class="legend-dot" style="background:hsl(0,85%,50%)"></span> ≥10</span>
         </div>
       </div>
 
