@@ -197,7 +197,8 @@ create policy "Users can insert own challenge unrated results"
 -- =============================================================
 
 -- 7a. Pending レコードの精算 — セッション開始時に呼ぶ
-create or replace function public.settle_pending_matches(p_user_id uuid)
+-- auth.uid() を使用し、自分のマッチのみ精算可能
+create or replace function public.settle_pending_matches()
 returns integer as $$
 declare
   settled_count integer;
@@ -206,7 +207,7 @@ begin
   with pending as (
     select id, question_id, user_rating_before, question_rating_before
     from public.match_history
-    where user_id = p_user_id and status = 'pending'
+    where user_id = auth.uid() and status = 'pending'
   )
   update public.match_history mh
   set
