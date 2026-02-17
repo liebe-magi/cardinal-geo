@@ -10,10 +10,18 @@ bun.lock
 # Source CSV (generated cities.ts is committed instead)
 r0711world_utf8.csv
 
+# Generated seed SQL (re-generate with `bun run seed`)
+supabase/seed_questions*.sql
+
 # Editor
 .vscode/
 *.swp
 *.swo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
 
 # OS
 .DS_Store

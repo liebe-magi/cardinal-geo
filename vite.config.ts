@@ -1,3 +1,5 @@
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { version } from './package.json';
@@ -12,11 +14,13 @@ export default defineConfig({
     outDir: 'dist',
   },
   plugins: [
+    react(),
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Cardinal - Geography Practice',
-        short_name: 'Cardinal',
+        name: 'Cardinal Geo',
+        short_name: 'Cardinal Geo',
         description: '首都の方角当てクイズアプリ',
         theme_color: '#00bcd4',
         background_color: '#121212',

@@ -1,12 +1,5 @@
-export interface City {
-  countryCode: string;
-  nameJp: string;
-  capitalJp: string;
-  nameEn: string;
-  capitalEn: string;
-  lat: number;
-  lon: number;
-}
+export type { City } from './types/city';
+import type { City } from './types/city';
 
 export const cities: City[] = [
   {

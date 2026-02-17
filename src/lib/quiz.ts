@@ -1,13 +1,7 @@
-import { cities, City } from './cities';
-
-export type Direction = 'N' | 'S' | 'E' | 'W';
-export type QuadDirection = { ns: 'N' | 'S'; ew: 'E' | 'W' };
-
-export interface Question {
-  cityA: City;
-  cityB: City;
-  correctDirection: QuadDirection;
-}
+import { cities } from '../cities';
+import type { City } from '../types/city';
+import type { QuadDirection, Question } from '../types/game';
+import type { Lang } from './i18n';
 
 export function getRandomCity(): City {
   return cities[Math.floor(Math.random() * cities.length)];
@@ -17,7 +11,6 @@ export function generateQuestion(): Question {
   const cityA = getRandomCity();
   let cityB = getRandomCity();
 
-  // Ensure strict different cities
   while (cityA.countryCode === cityB.countryCode && cityA.nameEn === cityB.nameEn) {
     cityB = getRandomCity();
   }
@@ -29,26 +22,36 @@ export function generateQuestion(): Question {
   };
 }
 
-// Calculate direction of cityA relative to cityB
-// "City A is [Direction] of City B"
-// Simple numeric comparison of lat/lon values (does not cross the 180th meridian).
-// e.g. New Zealand (lon=174) is considered EAST of Chile (lon=-70).
 export function calculateDirection(target: City, origin: City): QuadDirection {
   const dLat = target.lat - origin.lat;
   const dLon = target.lon - origin.lon;
-
   const ns = dLat >= 0 ? 'N' : 'S';
   const ew = dLon >= 0 ? 'E' : 'W';
-
   return { ns, ew };
 }
 
-export function formatDirection(dir: QuadDirection, lang: 'ja' | 'en'): string {
+export function checkAnswer(
+  userGuess: QuadDirection,
+  correct: QuadDirection,
+): { isCorrect: boolean; isPartialCorrect: boolean } {
+  const isCorrect = userGuess.ns === correct.ns && userGuess.ew === correct.ew;
+  const isPartialCorrect =
+    !isCorrect && (userGuess.ns === correct.ns || userGuess.ew === correct.ew);
+  return { isCorrect, isPartialCorrect };
+}
+
+export function formatDirection(dir: QuadDirection, lang: Lang): string {
   if (lang === 'ja') {
     return (dir.ns === 'N' ? '北' : '南') + (dir.ew === 'E' ? '東' : '西');
   } else {
     return (dir.ns === 'N' ? 'North' : 'South') + '-' + (dir.ew === 'E' ? 'East' : 'West');
   }
+}
+
+export function formatCoord(value: number, type: 'lat' | 'lon'): string {
+  const abs = Math.abs(value).toFixed(2);
+  if (type === 'lat') return `${abs}°${value >= 0 ? 'N' : 'S'}`;
+  return `${abs}°${value >= 0 ? 'E' : 'W'}`;
 }
 
 // --- Softmax-based weighted sampling for learning mode ---
@@ -77,7 +80,6 @@ export function generateLearningQuestion(weaknessScores: Record<string, number>)
   const idxA = weightedRandomIndex(probs);
   const cityA = cities[idxA];
 
-  // Select cityB (different from cityA), also weighted
   let idxB = weightedRandomIndex(probs);
   while (cities[idxB].countryCode === cityA.countryCode && cities[idxB].nameEn === cityA.nameEn) {
     idxB = weightedRandomIndex(probs);
