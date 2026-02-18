@@ -169,15 +169,17 @@ export function QuestionResult() {
         </div>
 
         {/* Action buttons */}
-        <button onClick={handleNext} className="btn-glow w-full py-3.5 rounded-xl text-base mb-2">
-          {t.ui.next}
-        </button>
-        <button
-          onClick={() => navigate('/')}
-          className="w-full py-2.5 rounded-xl bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200 text-sm font-medium"
-        >
-          {t.ui.backToTop}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => navigate('/')}
+            className="flex-1 py-3.5 rounded-xl bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200 text-sm font-medium"
+          >
+            {t.ui.backToTop}
+          </button>
+          <button onClick={handleNext} className="btn-glow flex-[2] py-3.5 rounded-xl text-base">
+            {t.ui.next}
+          </button>
+        </div>
       </div>
     </>
   );

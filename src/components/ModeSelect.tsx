@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUTCDateString } from '../lib/seededRandom';
 import { fetchRatingRank, getChallengeUnratedAvgScore, getDailyProgress } from '../lib/supabaseApi';
@@ -9,7 +9,7 @@ import type { GameMode, GameSubMode } from '../types/game';
 import { Header } from './Header';
 
 export function ModeSelect() {
-  const { t } = useSettingsStore();
+  const { t, lang } = useSettingsStore();
   const { isAuthenticated, profile, user } = useAuthStore();
   const startGame = useGameStore((s) => s.startGame);
   const pendingSettledCount = useGameStore((s) => s.pendingSettledCount);
@@ -20,6 +20,7 @@ export function ModeSelect() {
   );
   const [challengeUnratedAvg, setChallengeUnratedAvg] = useState<string | null>(null);
   const [rank, setRank] = useState<{ rank: number; total: number } | null>(null);
+  const [countdown, setCountdown] = useState('');
 
   // Redirect new users to username setup
   useEffect(() => {
@@ -54,6 +55,48 @@ export function ModeSelect() {
       setRank(rankData);
     })();
   }, [isAuthenticated, user]);
+
+  // Compute local reset time and timezone abbreviation (UTC 0:00 in user's timezone)
+  const { localTime, tzAbbr } = useMemo(() => {
+    const utcMidnight = new Date();
+    utcMidnight.setUTCHours(0, 0, 0, 0);
+    if (utcMidnight.getTime() <= Date.now()) {
+      utcMidnight.setUTCDate(utcMidnight.getUTCDate() + 1);
+    }
+    const localTime = utcMidnight.toLocaleTimeString(lang, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    // Extract timezone abbreviation (e.g. "JST", "EST")
+    const tzAbbr =
+      new Intl.DateTimeFormat(lang, { timeZoneName: 'short' })
+        .formatToParts(utcMidnight)
+        .find((p) => p.type === 'timeZoneName')?.value ?? 'local';
+    return { localTime, tzAbbr };
+  }, [lang]);
+
+  // Format remaining milliseconds as HH:MM:SS
+  const formatCountdown = useCallback((ms: number): string => {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }, []);
+
+  // Live countdown to next UTC midnight
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const nextMidnight = new Date(now);
+      nextMidnight.setUTCHours(24, 0, 0, 0);
+      setCountdown(formatCountdown(nextMidnight.getTime() - now.getTime()));
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [formatCountdown]);
 
   const handleStart = async (mode: GameMode, subMode: GameSubMode) => {
     if (subMode === 'rated' && !isAuthenticated) {
@@ -205,6 +248,14 @@ export function ModeSelect() {
                   </div>
                 )}
               </button>
+            </div>
+            {/* Daily reset countdown */}
+            <div className="mt-3 text-center text-xs text-text-secondary opacity-70 space-y-0.5">
+              <div>{t.ui.dailyResetTime.replace('{tz}', tzAbbr).replace('{time}', localTime)}</div>
+              <div>
+                🔄 {t.ui.dailyResetIn}:{' '}
+                <span className="font-mono font-semibold text-primary/80">{countdown}</span>
+              </div>
             </div>
           </div>
         </div>

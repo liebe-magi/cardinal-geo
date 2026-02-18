@@ -87,6 +87,8 @@ export const translations = {
       alreadyPlayedToday: '本日はプレイ済みです',
       shareResult: '結果をシェア',
       resumeChallenge: '続きから',
+      dailyResetIn: 'リセットまで',
+      dailyResetTime: 'UTC 00:00 ({tz} {time}) にリセット',
       // Ranking tabs
       rankingRating: 'レーティング',
       rankingSurvivalRated: 'サバイバル (Rated)',
@@ -227,6 +229,8 @@ export const translations = {
       alreadyPlayedToday: 'Already played today',
       shareResult: 'Share Result',
       resumeChallenge: 'Resume',
+      dailyResetIn: 'Resets in',
+      dailyResetTime: 'Resets at UTC 00:00 ({tz} {time})',
       // Ranking tabs
       rankingRating: 'Rating',
       rankingSurvivalRated: 'Survival (Rated)',
