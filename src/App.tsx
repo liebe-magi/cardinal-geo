@@ -12,7 +12,7 @@ import { WeaknessCheck } from './components/WeaknessCheck';
 export function App() {
   return (
     <BrowserRouter>
-      <div className="w-full max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 min-h-screen">
+      <div className="w-full max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 min-h-screen">
         <Routes>
           <Route path="/" element={<ModeSelect />} />
           <Route path="/quiz" element={<Quiz />} />
