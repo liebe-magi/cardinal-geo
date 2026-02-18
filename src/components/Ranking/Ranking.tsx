@@ -35,30 +35,16 @@ export function Ranking() {
 
       switch (activeTab) {
         case 'rating': {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, username, rating')
-            .order('rating', { ascending: false })
-            .limit(100);
-          if (profiles && profiles.length > 0) {
-            const userIds = profiles.map((p) => p.id);
-            // Fetch match_history for these users to count rated plays
-            const { data: matches } = await supabase
-              .from('match_history')
-              .select('user_id')
-              .in('user_id', userIds)
-              .neq('status', 'pending');
-            const countMap = new Map<string, number>();
-            matches?.forEach((m) => {
-              countMap.set(m.user_id, (countMap.get(m.user_id) || 0) + 1);
-            });
-            data = profiles.map((p) => ({
-              id: p.id,
-              username: p.username || '???',
-              value: Math.round(p.rating),
-              extra: String(countMap.get(p.id) || 0),
-            }));
-          }
+          const { data: results } = await supabase.rpc('get_rating_ranking');
+          data =
+            results?.map(
+              (r: { id: string; username: string; rating: number; play_count: number }) => ({
+                id: r.id,
+                username: r.username || '???',
+                value: Math.round(r.rating),
+                extra: String(r.play_count),
+              }),
+            ) || [];
           break;
         }
         case 'survival_rated': {

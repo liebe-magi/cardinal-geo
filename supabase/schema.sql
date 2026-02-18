@@ -240,6 +240,25 @@ begin
 end;
 $$ language plpgsql security definer;
 
+-- 7b2. Rating Ranking (with play count from match_history)
+create or replace function public.get_rating_ranking()
+returns table(id uuid, username text, rating double precision, play_count bigint) as $$
+begin
+  return query
+    select
+      p.id,
+      p.username,
+      p.rating,
+      count(mh.id) as play_count
+    from public.profiles p
+    left join public.match_history mh
+      on mh.user_id = p.id and mh.status != 'pending'
+    group by p.id, p.username, p.rating
+    order by p.rating desc
+    limit 100;
+end;
+$$ language plpgsql security definer;
+
 -- 7c. 問題を city_a_code + city_b_code で取得 (なければ作成)
 create or replace function public.get_or_create_question(
   p_city_a_code text,
