@@ -9,7 +9,7 @@ import type { GameMode, GameSubMode } from '../types/game';
 import { Header } from './Header';
 
 export function ModeSelect() {
-  const { t } = useSettingsStore();
+  const { t, lang } = useSettingsStore();
   const { isAuthenticated, profile, user } = useAuthStore();
   const startGame = useGameStore((s) => s.startGame);
   const pendingSettledCount = useGameStore((s) => s.pendingSettledCount);
@@ -63,18 +63,18 @@ export function ModeSelect() {
     if (utcMidnight.getTime() <= Date.now()) {
       utcMidnight.setUTCDate(utcMidnight.getUTCDate() + 1);
     }
-    const localTime = utcMidnight.toLocaleTimeString([], {
+    const localTime = utcMidnight.toLocaleTimeString(lang, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
     });
     // Extract timezone abbreviation (e.g. "JST", "EST")
     const tzAbbr =
-      new Intl.DateTimeFormat([], { timeZoneName: 'short' })
+      new Intl.DateTimeFormat(lang, { timeZoneName: 'short' })
         .formatToParts(utcMidnight)
         .find((p) => p.type === 'timeZoneName')?.value ?? 'local';
     return { localTime, tzAbbr };
-  }, []);
+  }, [lang]);
 
   // Format remaining milliseconds as HH:MM:SS
   const formatCountdown = useCallback((ms: number): string => {

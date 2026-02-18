@@ -59,8 +59,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await get().fetchProfile();
       }
 
-      // Listen for auth changes
-      supabase.auth.onAuthStateChange(async (_event, session) => {
+      // Listen for auth changes (store unsubscribe for proper cleanup)
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange(async (_event, session) => {
         if (session?.user) {
           set({
             user: session.user,
@@ -77,9 +79,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         }
       });
+      void subscription; // Retained for app-lifetime; unsubscribe if cleanup is needed
 
       // Refresh session when returning from background (mobile browsers)
-      document.addEventListener('visibilitychange', async () => {
+      const onVisibilityChange = async () => {
         if (document.visibilityState === 'visible' && supabase) {
           const {
             data: { session: refreshedSession },
@@ -90,9 +93,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               session: refreshedSession,
               isAuthenticated: true,
             });
+          } else {
+            set({
+              user: null,
+              session: null,
+              profile: null,
+              isAuthenticated: false,
+            });
           }
         }
-      });
+      };
+      document.addEventListener('visibilitychange', onVisibilityChange);
     } catch (error) {
       console.error('Auth initialization error:', error);
     } finally {
