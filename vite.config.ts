@@ -54,8 +54,6 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
-        // Prevent Service Worker from intercepting API requests as navigation
-        navigateFallbackDenylist: [/^\/auth/, /^\/rest/, /^\/realtime/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/unpkg\.com\/leaflet/,
