@@ -81,26 +81,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       void subscription; // Retained for app-lifetime; unsubscribe if cleanup is needed
 
-      // Refresh session when returning from background (mobile browsers)
-      const onVisibilityChange = async () => {
-        if (document.visibilityState === 'visible' && supabase) {
-          const {
-            data: { session: refreshedSession },
-          } = await supabase.auth.getSession();
-          if (refreshedSession?.user) {
-            set({
-              user: refreshedSession.user,
-              session: refreshedSession,
-              isAuthenticated: true,
-            });
-          } else {
-            set({
-              user: null,
-              session: null,
-              profile: null,
-              isAuthenticated: false,
-            });
-          }
+      // Manually start auto-refresh since autoRefreshToken is disabled on the client
+      supabase.auth.startAutoRefresh();
+
+      // Manage auto-refresh lifecycle based on tab visibility.
+      // This prevents the GoTrue client from entering a frozen state
+      // when the browser tab is backgrounded and then restored.
+      const onVisibilityChange = () => {
+        if (!supabase) return;
+        if (document.visibilityState === 'visible') {
+          supabase.auth.startAutoRefresh();
+        } else {
+          supabase.auth.stopAutoRefresh();
         }
       };
       document.addEventListener('visibilitychange', onVisibilityChange);
