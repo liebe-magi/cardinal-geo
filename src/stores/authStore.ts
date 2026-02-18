@@ -77,6 +77,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
         }
       });
+
+      // Refresh session when returning from background (mobile browsers)
+      document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && supabase) {
+          const {
+            data: { session: refreshedSession },
+          } = await supabase.auth.getSession();
+          if (refreshedSession?.user) {
+            set({
+              user: refreshedSession.user,
+              session: refreshedSession,
+              isAuthenticated: true,
+            });
+          }
+        }
+      });
     } catch (error) {
       console.error('Auth initialization error:', error);
     } finally {
