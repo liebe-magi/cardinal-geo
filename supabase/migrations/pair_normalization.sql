@@ -6,10 +6,13 @@
 -- into a single normalized entry where city_a_code < city_b_code.
 --
 -- Run in Supabase SQL Editor.
+-- Step 1 (dry run) should be run separately first to inspect duplicates.
+-- Steps 2-6 are wrapped in a transaction for atomicity.
 -- =================================================================
 
 -- Step 1: Check for duplicates (dry run — inspect before proceeding)
 -- ステップ1: 重複の確認（ドライラン — 実行前に確認）
+-- Run this SELECT separately to inspect results before running the migration.
 SELECT
   q1.id as keep_id,
   q1.city_a_code as keep_a,
@@ -26,6 +29,13 @@ JOIN questions q2
   ON q1.city_a_code = q2.city_b_code
  AND q1.city_b_code = q2.city_a_code
 WHERE q1.city_a_code < q1.city_b_code;  -- keep the normalized one
+
+-- =================================================================
+-- Steps 2-6: Run as a single transaction after inspecting Step 1.
+-- ステップ2-6: ステップ1を確認後、単一トランザクションとして実行。
+-- =================================================================
+
+BEGIN;
 
 -- Step 2: Update match_history foreign keys to point to the kept (normalized) question
 -- ステップ2: match_historyの外部キーを正規化された方のquestionに付け替え
@@ -48,7 +58,11 @@ WHERE mh.question_id = dups.remove_id;
 -- Since the DB stores correct_ns/correct_ew for the normalized order,
 -- and we only care about total play_count and win_count for Glicko-2 RD,
 -- we simply add both.
+-- vol is intentionally NOT merged: it defaults to 0.06 and rarely changes
+-- significantly, so keeping the existing value is acceptable.
 -- 注意: 逆順ペアのwin_countは同じ地理的関係を指すため、単純に加算する。
+-- volは意図的にマージしない: デフォルト0.06からほとんど変動しないため、
+-- 既存値を保持する。
 UPDATE questions q_keep
 SET
   play_count = q_keep.play_count + q_rev.play_count,
@@ -90,8 +104,8 @@ SET
   city_b_code = city_a_code,
   city_a_capital = city_b_capital,
   city_b_capital = city_a_capital,
-  correct_ns = CASE correct_ns WHEN 'N' THEN 'S' ELSE 'N' END,
-  correct_ew = CASE correct_ew WHEN 'E' THEN 'W' ELSE 'E' END
+  correct_ns = CASE correct_ns WHEN 'N' THEN 'S' WHEN 'S' THEN 'N' END,
+  correct_ew = CASE correct_ew WHEN 'E' THEN 'W' WHEN 'W' THEN 'E' END
 WHERE city_a_code > city_b_code;
 
 -- Step 6: Verify — all entries should now satisfy city_a_code < city_b_code
@@ -100,3 +114,5 @@ SELECT count(*) as total_pairs,
        count(*) FILTER (WHERE city_a_code < city_b_code) as normalized,
        count(*) FILTER (WHERE city_a_code >= city_b_code) as not_normalized
 FROM questions;
+
+COMMIT;
