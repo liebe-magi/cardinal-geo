@@ -128,8 +128,8 @@ export function Ranking() {
                 id: r.country_code,
                 username:
                   lang === 'ja'
-                    ? `${city?.nameJp || r.country_code} (${city?.capitalJp || '?'})`
-                    : `${city?.nameEn || r.country_code} (${city?.capitalEn || '?'})`,
+                    ? `${city?.capitalJp || '?'} (${city?.nameJp || r.country_code})`
+                    : `${city?.capitalEn || '?'} (${city?.nameEn || r.country_code})`,
                 value: Math.round(r.rating),
                 extra: String(r.play_count),
               };
