@@ -30,6 +30,30 @@ export function calculateDirection(target: City, origin: City): QuadDirection {
   return { ns, ew };
 }
 
+/**
+ * Normalize a city pair for DB storage.
+ * Sorts cities by countryCode alphabetically so that (A,B) and (B,A)
+ * always map to the same DB entry. Returns the normalized pair with
+ * the correct direction calculated for the normalized order.
+ */
+export function normalizePair(
+  cityA: City,
+  cityB: City,
+): { normalizedA: City; normalizedB: City; correctDirection: QuadDirection } {
+  if (cityA.countryCode <= cityB.countryCode) {
+    return {
+      normalizedA: cityA,
+      normalizedB: cityB,
+      correctDirection: calculateDirection(cityA, cityB),
+    };
+  }
+  return {
+    normalizedA: cityB,
+    normalizedB: cityA,
+    correctDirection: calculateDirection(cityB, cityA),
+  };
+}
+
 export function checkAnswer(
   userGuess: QuadDirection,
   correct: QuadDirection,
