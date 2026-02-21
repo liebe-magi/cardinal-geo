@@ -267,7 +267,9 @@ export function Ranking() {
                         ? t.ui.rating
                         : t.ui.score}
                   </th>
-                  {(activeTab === 'challenge_unrated' || activeTab === 'city_difficulty') && (
+                  {(activeTab === 'rating' ||
+                    activeTab === 'challenge_unrated' ||
+                    activeTab === 'city_difficulty') && (
                     <th className="text-right py-2.5 px-3 font-semibold">{t.ui.playCount}</th>
                   )}
                 </tr>
@@ -285,17 +287,13 @@ export function Ranking() {
                         className={`py-2 px-3 ${isMe ? 'text-primary font-bold' : 'text-text-primary'}`}
                       >
                         {entry.username}
-                        {(activeTab === 'rating' || activeTab === 'city_difficulty') &&
-                          entry.extra && (
-                            <span className="text-text-secondary font-normal text-xs ml-1">
-                              ({entry.extra})
-                            </span>
-                          )}
                       </td>
                       <td className="py-2 px-3 text-right font-bold text-text-primary">
                         {activeTab === 'challenge_unrated' ? entry.value.toFixed(2) : entry.value}
                       </td>
-                      {(activeTab === 'challenge_unrated' || activeTab === 'city_difficulty') && (
+                      {(activeTab === 'rating' ||
+                        activeTab === 'challenge_unrated' ||
+                        activeTab === 'city_difficulty') && (
                         <td className="py-2 px-3 text-right text-text-secondary text-xs">
                           {entry.extra}
                         </td>
