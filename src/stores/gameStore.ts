@@ -290,9 +290,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const score = isCorrect ? (1 as const) : (0 as const);
       const result = calculateNewRatings(playerRating, compositeOpponent, score);
 
-      // Calculate pair update: re-run Glicko-2 for the pair directly against
-      // the player to get a clean pair update.
-      const pairResult = calculateNewRatings(pairRating, playerRating, score === 1 ? 0 : 1);
+      // Calculate pair update: re-run Glicko-2 for the pair as "player" vs user
+      // to get a clean pair-specific rating update.
+      const { player: newPairRating } = calculateNewRatings(
+        pairRating,
+        playerRating,
+        score === 1 ? 0 : 1,
+      );
 
       // Calculate city rating updates (scaled by 1-α)
       const cityScore = (score === 1 ? 0 : 1) as 0 | 1; // inverted: if player won, city "lost"
@@ -330,7 +334,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         gameState.currentMatchHistoryId,
         isCorrect,
         result.player,
-        pairResult.player, // this is the pair's new rating (pair played as "player" vs user)
+        newPairRating,
         result.ratingChange,
         compositeOpponent.rating, // store composite rating for matchmaking
         cityUpdates,

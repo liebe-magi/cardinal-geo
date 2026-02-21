@@ -23,7 +23,7 @@ interface RankingEntry {
 
 export function Ranking() {
   const navigate = useNavigate();
-  const { t } = useSettingsStore();
+  const { t, lang } = useSettingsStore();
   const { profile } = useAuthStore();
   const [activeTab, setActiveTab] = useState<RankingTab>('rating');
   const [entries, setEntries] = useState<RankingEntry[]>([]);
@@ -123,7 +123,6 @@ export function Ranking() {
           data =
             results?.map((r: { country_code: string; rating: number; play_count: number }) => {
               const city = cities.find((c) => c.countryCode === r.country_code);
-              const lang = useSettingsStore.getState().lang;
               return {
                 id: r.country_code,
                 username:
@@ -145,7 +144,7 @@ export function Ranking() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, dailyDate, citySortAsc]);
+  }, [activeTab, dailyDate, citySortAsc, lang]);
 
   useEffect(() => {
     fetchRanking();
