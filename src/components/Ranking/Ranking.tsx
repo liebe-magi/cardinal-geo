@@ -258,7 +258,7 @@ export function Ranking() {
                 <tr className="text-text-secondary border-b border-white/8 bg-surface-light/30 sticky top-0">
                   <th className="text-left py-2.5 px-3 font-semibold w-12">#</th>
                   <th className="text-left py-2.5 px-3 font-semibold">
-                    {activeTab === 'city_difficulty' ? t.ui.country : t.ui.username}
+                    {activeTab === 'city_difficulty' ? t.ui.capital : t.ui.username}
                   </th>
                   <th className="text-right py-2.5 px-3 font-semibold">
                     {activeTab === 'challenge_unrated'
