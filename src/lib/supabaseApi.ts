@@ -3,6 +3,7 @@
  */
 
 import type { QuadDirection, Question } from '../types/game';
+import { type CityRating, DEFAULT_CITY_RATING } from './compositeRating';
 import { calculateNewRatings, type GlickoRating } from './glicko2';
 import { normalizePair } from './quiz';
 import { supabase } from './supabase';
@@ -169,6 +170,46 @@ export async function getOrCreateQuestion(question: Question): Promise<DbQuestio
   return data as DbQuestion;
 }
 
+/**
+ * Fetch city ratings for two city codes.
+ * Returns defaults for missing cities (e.g., first encounter).
+ */
+export async function fetchCityRatings(
+  codeA: string,
+  codeB: string,
+): Promise<{ cityA: CityRating; cityB: CityRating }> {
+  const defaults = (code: string): CityRating => ({
+    countryCode: code,
+    ...DEFAULT_CITY_RATING,
+  });
+
+  if (!supabase) return { cityA: defaults(codeA), cityB: defaults(codeB) };
+
+  const { data, error } = await supabase
+    .from('city_ratings')
+    .select('country_code, rating, rd, vol, play_count')
+    .in('country_code', [codeA, codeB]);
+
+  if (error || !data) {
+    console.error('Error fetching city ratings:', error);
+    return { cityA: defaults(codeA), cityB: defaults(codeB) };
+  }
+
+  const findOrDefault = (code: string): CityRating => {
+    const row = data.find((r) => r.country_code === code);
+    if (!row) return defaults(code);
+    return {
+      countryCode: row.country_code,
+      rating: row.rating,
+      rd: row.rd,
+      vol: row.vol,
+      playCount: row.play_count,
+    };
+  };
+
+  return { cityA: findOrDefault(codeA), cityB: findOrDefault(codeB) };
+}
+
 // ============================================================
 // Match History (Pending Commitment)
 // ============================================================
@@ -212,7 +253,10 @@ export async function createPendingMatch(
 
 /**
  * Submit a rated answer — resolves the pending match to win/lose
- * and updates both player and question ratings.
+ * and updates player, question (pair), and city ratings.
+ *
+ * @param cityUpdates - Optional city rating updates. When null (e.g. settlement),
+ *   only player and pair ratings are updated; city ratings are left unchanged.
  */
 export async function submitRatedAnswer(
   matchHistoryId: number,
@@ -220,6 +264,13 @@ export async function submitRatedAnswer(
   newPlayerRating: GlickoRating,
   newQuestionRating: GlickoRating,
   ratingChange: number,
+  compositeRating?: number,
+  cityUpdates?: {
+    cityACode: string;
+    cityA: GlickoRating;
+    cityBCode: string;
+    cityB: GlickoRating;
+  } | null,
 ): Promise<boolean> {
   if (!supabase) return false;
 
@@ -233,6 +284,15 @@ export async function submitRatedAnswer(
     p_new_question_rd: newQuestionRating.rd,
     p_new_question_vol: newQuestionRating.vol,
     p_rating_change: ratingChange,
+    p_composite_rating: compositeRating ?? null,
+    p_city_a_code: cityUpdates?.cityACode ?? null,
+    p_city_a_rating: cityUpdates?.cityA.rating ?? null,
+    p_city_a_rd: cityUpdates?.cityA.rd ?? null,
+    p_city_a_vol: cityUpdates?.cityA.vol ?? null,
+    p_city_b_code: cityUpdates?.cityBCode ?? null,
+    p_city_b_rating: cityUpdates?.cityB.rating ?? null,
+    p_city_b_rd: cityUpdates?.cityB.rd ?? null,
+    p_city_b_vol: cityUpdates?.cityB.vol ?? null,
   });
 
   if (error) {

@@ -1,10 +1,12 @@
 import { create } from 'zustand';
+import { calculateCityRatingUpdate, calculateCompositeOpponent } from '../lib/compositeRating';
 import { generateDailyChallengeQuestions } from '../lib/dailyChallenge';
 import { calculateNewRatings, type GlickoRating } from '../lib/glicko2';
 import { checkAnswer, generateLearningQuestion, generateQuestion } from '../lib/quiz';
 import { getUTCDateString } from '../lib/seededRandom';
 import {
   createPendingMatch,
+  fetchCityRatings,
   getDailyProgress,
   getOrCreateQuestion,
   saveChallengeUnratedResult,
@@ -267,25 +269,71 @@ export const useGameStore = create<GameStore>((set, get) => ({
         rd: authState.profile.rd,
         vol: authState.profile.vol,
       };
-      const questionRating: GlickoRating = {
+      const pairRating: GlickoRating = {
         rating: currentDbQuestion.rating,
         rd: currentDbQuestion.rd,
         vol: currentDbQuestion.vol,
       };
 
+      // Fetch city ratings and compute composite opponent
+      const { cityA: cityARating, cityB: cityBRating } = await fetchCityRatings(
+        currentDbQuestion.city_a_code,
+        currentDbQuestion.city_b_code,
+      );
+      const { opponent: compositeOpponent, alpha } = calculateCompositeOpponent(
+        cityARating,
+        cityBRating,
+        pairRating,
+      );
+
+      // Player vs composite opponent
       const score = isCorrect ? (1 as const) : (0 as const);
-      const result = calculateNewRatings(playerRating, questionRating, score);
+      const result = calculateNewRatings(playerRating, compositeOpponent, score);
+
+      // Calculate pair update: re-run Glicko-2 for the pair directly against
+      // the player to get a clean pair update.
+      const pairResult = calculateNewRatings(pairRating, playerRating, score === 1 ? 0 : 1);
+
+      // Calculate city rating updates (scaled by 1-α)
+      const cityScore = (score === 1 ? 0 : 1) as 0 | 1; // inverted: if player won, city "lost"
+      const newCityA = calculateCityRatingUpdate(
+        cityARating,
+        playerRating.rating,
+        playerRating.rd,
+        cityScore,
+        alpha,
+      );
+      const newCityB = calculateCityRatingUpdate(
+        cityBRating,
+        playerRating.rating,
+        playerRating.rd,
+        cityScore,
+        alpha,
+      );
 
       ratingChange = result.ratingChange;
       record.ratingChange = ratingChange;
+
+      // Prepare city updates for DB
+      const cityUpdates =
+        newCityA && newCityB
+          ? {
+              cityACode: currentDbQuestion.city_a_code,
+              cityA: newCityA,
+              cityBCode: currentDbQuestion.city_b_code,
+              cityB: newCityB,
+            }
+          : null;
 
       // Submit to Supabase
       await submitRatedAnswer(
         gameState.currentMatchHistoryId,
         isCorrect,
         result.player,
-        result.question,
+        pairResult.player, // this is the pair's new rating (pair played as "player" vs user)
         result.ratingChange,
+        compositeOpponent.rating, // store composite rating for matchmaking
+        cityUpdates,
       );
 
       // Refresh profile to get updated rating
