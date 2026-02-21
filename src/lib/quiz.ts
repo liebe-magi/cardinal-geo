@@ -30,6 +30,36 @@ export function calculateDirection(target: City, origin: City): QuadDirection {
   return { ns, ew };
 }
 
+/**
+ * Normalize a city pair for DB storage.
+ * Sorts cities by countryCode alphabetically (with capitalEn as tiebreaker)
+ * so that (A,B) and (B,A) always map to the same DB entry.
+ * Returns the normalized pair with the correct direction calculated
+ * for the normalized order.
+ */
+export function normalizePair(
+  cityA: City,
+  cityB: City,
+): { normalizedA: City; normalizedB: City; correctDirection: QuadDirection } {
+  // Primary sort: countryCode, secondary sort: capitalEn (for same countryCode)
+  const aFirst =
+    cityA.countryCode < cityB.countryCode ||
+    (cityA.countryCode === cityB.countryCode && cityA.capitalEn <= cityB.capitalEn);
+
+  if (aFirst) {
+    return {
+      normalizedA: cityA,
+      normalizedB: cityB,
+      correctDirection: calculateDirection(cityA, cityB),
+    };
+  }
+  return {
+    normalizedA: cityB,
+    normalizedB: cityA,
+    correctDirection: calculateDirection(cityB, cityA),
+  };
+}
+
 export function checkAnswer(
   userGuess: QuadDirection,
   correct: QuadDirection,

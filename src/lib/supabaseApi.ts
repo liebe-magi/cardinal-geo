@@ -4,6 +4,7 @@
 
 import type { QuadDirection, Question } from '../types/game';
 import { calculateNewRatings, type GlickoRating } from './glicko2';
+import { normalizePair } from './quiz';
 import { supabase } from './supabase';
 
 // ============================================================
@@ -138,18 +139,26 @@ export async function settlePendingMatches(userId: string): Promise<number> {
 
 /**
  * Get or create a question record for a city pair.
+ * Normalizes the pair order (alphabetical by countryCode) before DB lookup
+ * to ensure (A,B) and (B,A) map to the same entry.
  * Returns the DB question with its current Glicko-2 rating.
  */
 export async function getOrCreateQuestion(question: Question): Promise<DbQuestion | null> {
   if (!supabase) return null;
 
+  // Normalize pair order for DB storage
+  const { normalizedA, normalizedB, correctDirection } = normalizePair(
+    question.cityA,
+    question.cityB,
+  );
+
   const { data, error } = await supabase.rpc('get_or_create_question', {
-    p_city_a_code: question.cityA.countryCode,
-    p_city_b_code: question.cityB.countryCode,
-    p_city_a_capital: question.cityA.capitalEn,
-    p_city_b_capital: question.cityB.capitalEn,
-    p_correct_ns: question.correctDirection.ns,
-    p_correct_ew: question.correctDirection.ew,
+    p_city_a_code: normalizedA.countryCode,
+    p_city_b_code: normalizedB.countryCode,
+    p_city_a_capital: normalizedA.capitalEn,
+    p_city_b_capital: normalizedB.capitalEn,
+    p_correct_ns: correctDirection.ns,
+    p_correct_ew: correctDirection.ew,
   });
 
   if (error) {
