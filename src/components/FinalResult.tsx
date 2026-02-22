@@ -351,6 +351,22 @@ export function FinalResult() {
           </div>
         )}
 
+        {/* Guest CTA */}
+        {!isAuthenticated && (
+          <div className="mb-5 p-5 bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl text-center">
+            <h3 className="text-text-primary font-bold mb-2">もっと楽しむには？</h3>
+            <p className="text-text-secondary text-xs leading-relaxed mb-4">
+              アカウントを作成すると、全198カ国から出題されるレーティング戦に参加でき、毎日のプレイ記録やスコアを保存できます！
+            </p>
+            <button
+              onClick={() => navigate('/login')}
+              className="px-6 py-2.5 bg-primary text-bg font-bold rounded-lg hover:bg-cyan-400 transition-colors text-sm"
+            >
+              無料アカウント作成 / ログイン
+            </button>
+          </div>
+        )}
+
         {/* Action buttons */}
         <button
           onClick={async () => {
@@ -362,7 +378,7 @@ export function FinalResult() {
           {t.ui.retry}
         </button>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/play')}
           className="w-full py-2.5 rounded-xl bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200 text-sm font-medium"
         >
           {t.ui.backToTop}

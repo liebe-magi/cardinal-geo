@@ -7,6 +7,8 @@ export const translations = {
       survival: 'サバイバル',
       challenge: 'チャレンジ',
       learning: '学習',
+      starter: '有名首都',
+      region: 'エリア限定',
     },
     modeDesc: {
       survival: '失敗するまで続くエンドレスモード',
@@ -16,12 +18,15 @@ export const translations = {
       challenge_daily: '日替わりチャレンジ',
       challenge_unrated: 'ランダム10問で腕試し',
       learning: '苦手な問題を優先的に出題',
+      starter: 'みんなが知っている首都だけ出題',
+      region: '特定の地域に絞って出題',
     },
     subModes: {
       rated: 'Rated',
       unrated: 'Unrated',
       daily: 'Rated',
       tenQs: 'Unrated',
+      play: 'プレイ',
     },
     ui: {
       flipNS: '南北反転',
@@ -145,6 +150,34 @@ export const translations = {
       E: '東',
       W: '西',
     },
+    landing: {
+      heroTitleLine1: 'あなたの「地理力」を',
+      heroTitleLine2: '世界で試そう',
+      heroDesc:
+        '「Cardinal Geo」は、2つの都市の相対的な方角を当てる、シンプルで奥深い地理クイズゲームです。知識を磨いてレーティングを上げ、グローバルランキングの頂点を目指しましょう！',
+      feature1Title: '有名首都から挑戦',
+      feature1Desc:
+        'まずは誰もが知っている有名な都市からスタート。アカウント登録なしでもすぐにお試しプレイが可能です。',
+      feature2Title: 'レーティング戦',
+      feature2Desc:
+        'アカウントを作成すると、全198カ国から出題される本格的な「Rated」モードに参加可能。オンラインチェスや競技ゲームでも採用されている本格的なレーティングシステム（Glicko-2）を導入しています。',
+      feature3Title: '地域別の特訓も可能',
+      feature3Desc:
+        '「ヨーロッパだけ」「東南アジアだけ」など、自分の得意な地域・苦手な地域に絞って出題範囲をカスタマイズできます。',
+      tryOutTitle: 'まずは試してみる',
+      tryOutDesc:
+        '誰もが知っている世界の主要な首都の中から出題される「有名首都モード」を、登録なしで今すぐ体験できます。',
+      tryOutBtn: 'お試しプレイ（有名首都モード）',
+      howToPlayTitle: '遊び方',
+      howToPlayDesc: 'ルールは直感的でシンプル。2つの都市の位置関係を当てるだけです。',
+      step1Title: 'お題を確認',
+      step1Desc: '「ターゲット都市」と「基準の都市」の名前が表示されます。',
+      step2Title: '位置を予想',
+      step2Desc:
+        'ターゲット都市が、基準の都市から見て【北西・北東・南西・南東】のどの方向にあるかを選びます。',
+      step3Title: '正解を目指せ',
+      step3Desc: '見事正解してスコアを伸ばし、世界の都市の位置関係をマスターしましょう！',
+    },
   },
   en: {
     appTitle: 'Cardinal Geo',
@@ -152,6 +185,8 @@ export const translations = {
       survival: 'Survival',
       challenge: 'Challenge',
       learning: 'Learning',
+      starter: 'Starter',
+      region: 'Regional',
     },
     modeDesc: {
       survival: 'Endless mode until you miss',
@@ -161,12 +196,15 @@ export const translations = {
       challenge_daily: 'Daily challenge',
       challenge_unrated: 'Random 10 questions practice',
       learning: 'Focus on your weak spots',
+      starter: 'Only famous capitals are included',
+      region: 'Focus on a specific region',
     },
     subModes: {
       rated: 'Rated',
       unrated: 'Unrated',
       daily: 'Rated',
       tenQs: 'Unrated',
+      play: 'Play',
     },
     ui: {
       flipNS: 'Flip N/S',
@@ -289,6 +327,36 @@ export const translations = {
       S: 'S',
       E: 'E',
       W: 'W',
+    },
+    landing: {
+      heroTitleLine1: 'Test your "Geo-Skills"',
+      heroTitleLine2: 'against the World',
+      heroDesc:
+        '"Cardinal Geo" is a simple yet deep geography quiz game where you guess the relative direction between two cities. Hone your knowledge, raise your rating, and aim for the top of the global rankings!',
+      feature1Title: 'Start with Famous Capitals',
+      feature1Desc:
+        'Begin with cities everyone knows. You can try it out immediately without registering an account.',
+      feature2Title: 'Rated Matches',
+      feature2Desc:
+        'Create an account to join the serious "Rated" mode featuring all 198 countries, utilizing an authentic rating system (Glicko-2) widely adopted in online chess and modern competitive games!',
+      feature3Title: 'Regional Training',
+      feature3Desc:
+        'Customize your question range to focus on your strongest or weakest regions, like "Only Europe" or "Only Southeast Asia".',
+      tryOutTitle: 'Try it right now',
+      tryOutDesc:
+        'Experience the "Starter Mode" immediately without registration, featuring the most well-known world capitals.',
+      tryOutBtn: 'Try it out (Famous Capitals Mode)',
+      howToPlayTitle: 'How To Play',
+      howToPlayDesc:
+        'The rules are intuitive and simple. Just guess the relative direction between two cities.',
+      step1Title: 'Check the Question',
+      step1Desc: 'The names of the "Target City" and the "Origin City" will be displayed.',
+      step2Title: 'Guess the Direction',
+      step2Desc:
+        'Choose which direction (NW, NE, SW, or SE) the Target City is located relative to the Origin City.',
+      step3Title: 'Aim for the exact direction',
+      step3Desc:
+        'Guess the exact direction to increase your score and master the geographical relationships of cities around the world!',
     },
   },
 };

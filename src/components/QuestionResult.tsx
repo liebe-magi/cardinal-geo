@@ -171,7 +171,7 @@ export function QuestionResult() {
         {/* Action buttons */}
         <div className="flex gap-3">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/play')}
             className="flex-1 py-3.5 rounded-xl bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200 text-sm font-medium"
           >
             {t.ui.backToTop}

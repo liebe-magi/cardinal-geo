@@ -26,6 +26,7 @@ import type {
   Question,
   QuestionRecord,
 } from '../types/game';
+import type { City } from '../types/city';
 import { createInitialGameState } from '../types/game';
 import { useAuthStore } from './authStore';
 
@@ -40,6 +41,9 @@ interface GameStore {
     isPartialCorrect: boolean;
     ratingChange?: number;
   } | null;
+
+  // Filtered dataset for Starter / Region
+  filteredCities: City[] | null;
 
   // Daily challenge
   dailyQuestions: Question[];
@@ -71,6 +75,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   userGuess: { ns: 'N', ew: 'E' },
   isShowingResult: false,
   lastAnswerResult: null,
+  filteredCities: null,
   dailyQuestions: [],
   dailyDateStr: '',
   currentDbQuestion: null,
@@ -113,6 +118,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
+    // Handle Starter mode fetching
+    let filteredCities: City[] | null = null;
+    if (mode === 'starter') {
+      const { FAMOUS_CITY_CODES } = await import('../lib/famousCities');
+      const { cities } = await import('../cities');
+      filteredCities = cities.filter((c) => FAMOUS_CITY_CODES.includes(c.countryCode));
+    } else if (mode !== 'survival' && mode !== 'challenge' && mode !== 'learning') {
+      // It's a region
+      const { cities } = await import('../cities');
+      const { countryRegionMap } = await import('../lib/regions');
+      filteredCities = cities.filter((c) => countryRegionMap[c.countryCode] === mode);
+    }
+
     // For daily challenge, pre-generate all 10 questions and check for resume
     let dailyQuestions: Question[] = [];
     let dailyDateStr = '';
@@ -151,6 +169,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       },
       isShowingResult: false,
       lastAnswerResult: null,
+      filteredCities,
       dailyQuestions,
       dailyDateStr,
       currentDbQuestion: null,
@@ -177,7 +196,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const weaknessScores = authState.profile?.weakness_scores || {};
       question = generateLearningQuestion(weaknessScores);
     } else {
-      question = generateQuestion();
+      question = generateQuestion(get().filteredCities || undefined);
     }
 
     // For rated modes: get/create question in DB and create pending match
@@ -466,6 +485,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       userGuess: { ns: 'N', ew: 'E' },
       isShowingResult: false,
       lastAnswerResult: null,
+      filteredCities: null,
       dailyQuestions: [],
       dailyDateStr: '',
       currentDbQuestion: null,

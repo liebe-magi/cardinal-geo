@@ -535,6 +535,22 @@ export async function fetchWeaknessScores(userId: string): Promise<Record<string
   return (data?.weakness_scores as Record<string, number>) || {};
 }
 
+export async function fetchFamousCities(): Promise<string[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('city_ratings')
+    .select('country_code')
+    .order('rating', { ascending: true })
+    .limit(30);
+
+  if (error) {
+    console.error('Error fetching famous cities:', error);
+    return [];
+  }
+  return data.map((row) => row.country_code);
+}
+
 // ============================================================
 // Best Score Updates
 // ============================================================

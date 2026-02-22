@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { regionLabels, type Region } from '../lib/regions';
 import { getUTCDateString } from '../lib/seededRandom';
 import { fetchRatingRank, getChallengeUnratedAvgScore, getDailyProgress } from '../lib/supabaseApi';
 import { useAuthStore } from '../stores/authStore';
@@ -257,6 +258,40 @@ export function ModeSelect() {
                 <span className="font-mono font-semibold text-primary/80">{countdown}</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Starter (Famous Cities) Mode */}
+        <button
+          onClick={() => handleStart('starter', 'unrated')}
+          className="glass-card w-full p-5 text-left transition-all duration-200 group hover-lift cursor-pointer shadow-[0_0_15px_rgba(251,191,36,0.15)] border-accent/20"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xl">🌟</span>
+            <span className="text-text-primary text-base font-bold text-accent">
+              {t.modes.starter}
+            </span>
+          </div>
+          <p className="text-text-secondary text-xs leading-relaxed m-0">{t.modeDesc.starter}</p>
+        </button>
+
+        {/* Region Mode */}
+        <div className="glass-card p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">🌍</span>
+            <h3 className="text-text-primary text-base font-bold">{t.modes.region}</h3>
+          </div>
+          <p className="text-text-secondary text-xs mb-4 leading-relaxed">{t.modeDesc.region}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {(Object.keys(regionLabels) as Region[]).map((region) => (
+              <button
+                key={region}
+                onClick={() => handleStart(region as GameMode, 'unrated')}
+                className="group p-3 rounded-xl font-semibold text-xs bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200 text-center"
+              >
+                {regionLabels[region][lang]}
+              </button>
+            ))}
           </div>
         </div>
 
