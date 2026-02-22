@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { regionLabels, type Region } from '../lib/regions';
 import { getUTCDateString } from '../lib/seededRandom';
-import { fetchRatingRank, getDailyProgress } from '../lib/supabaseApi';
+import { fetchAllModeStats, fetchRatingRank, getDailyProgress } from '../lib/supabaseApi';
 import { useAuthStore } from '../stores/authStore';
 import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -20,6 +20,7 @@ export function ModeSelect() {
     'available',
   );
   const [dailyScore, setDailyScore] = useState<number | null>(null);
+  const [dailyAvg, setDailyAvg] = useState<number | null>(null);
   const [rank, setRank] = useState<{ rank: number; total: number } | null>(null);
   const [countdown, setCountdown] = useState('');
 
@@ -42,9 +43,10 @@ export function ModeSelect() {
   useEffect(() => {
     if (!isAuthenticated || !user) return;
     (async () => {
-      const [progress, rankData] = await Promise.all([
+      const [progress, rankData, stats] = await Promise.all([
         getDailyProgress(getUTCDateString()),
         fetchRatingRank(user.id),
+        fetchAllModeStats(user.id),
       ]);
       if (progress) {
         setDailyStatus(progress.status === 'completed' ? 'completed' : 'in_progress');
@@ -55,6 +57,7 @@ export function ModeSelect() {
         setDailyStatus('available');
       }
       setRank(rankData);
+      if (stats) setDailyAvg(stats.challengeDaily.avg);
     })();
   }, [isAuthenticated, user]);
 
@@ -230,9 +233,17 @@ export function ModeSelect() {
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-2xl">🎯</span>
                 <h3 className="text-text-primary text-xl font-bold">{t.modes.challenge}</h3>
-                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/20 text-secondary uppercase tracking-widest border border-secondary/30">
-                  Rated
-                </span>
+                <div className="ml-auto flex items-center gap-2">
+                  {isAuthenticated && dailyStatus === 'completed' && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-success/20 text-success uppercase tracking-widest border border-success/30 flex items-center gap-1">
+                      <span className="text-[10px]">✅</span>
+                      Played
+                    </span>
+                  )}
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/20 text-secondary uppercase tracking-widest border border-secondary/30">
+                    Rated
+                  </span>
+                </div>
               </div>
               <p className="text-text-secondary text-sm mb-4 leading-relaxed max-w-[85%]">
                 {t.modeDesc.challenge}
@@ -242,12 +253,24 @@ export function ModeSelect() {
                 {isAuthenticated ? (
                   <div className="flex items-center gap-3">
                     {dailyStatus === 'completed' ? (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/20 border border-white/10 text-sm">
-                        <span className="text-secondary">🏆</span>
-                        <span className="text-text-secondary">{t.ui.score}:</span>
-                        <span className="font-bold text-text-primary text-base">
-                          {dailyScore}/10
-                        </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/20 border border-white/10 text-sm">
+                          <span className="text-secondary">🏆</span>
+                          <span className="text-text-secondary">{t.ui.score}:</span>
+                          <span className="font-bold text-text-primary text-base">
+                            {dailyScore}/10
+                          </span>
+                        </div>
+                        {dailyAvg !== null && (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/20 border border-white/10 text-xs shadow-inner">
+                            <span className="text-text-secondary">
+                              {t.ui.avgScore || 'Average'}:
+                            </span>
+                            <span className="font-bold text-text-primary">
+                              {dailyAvg.toFixed(1)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div
