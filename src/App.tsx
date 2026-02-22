@@ -1,5 +1,6 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
 import { FinalResult } from './components/FinalResult';
+import { GlobalStats } from './components/GlobalStats';
 import { LandingPage } from './components/LandingPage';
 import { Login } from './components/Login';
 import { ModeSelect } from './components/ModeSelect';
@@ -9,15 +10,15 @@ import { QuestionResult } from './components/QuestionResult';
 import { Quiz } from './components/Quiz/Quiz';
 import { Ranking } from './components/Ranking/Ranking';
 import { SetupUsername } from './components/SetupUsername';
-import { WeaknessCheck } from './components/WeaknessCheck';
 
 export function App() {
   return (
     <BrowserRouter>
-      <div className="w-full max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 min-h-screen">
+      <div className="w-full max-w-2xl lg:max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 min-h-[100dvh]">
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/weakness" element={<Navigate to="/profile" replace />} />
           <Route path="/login" element={<Login />} />
 
           {/* Protected routes — redirect to LP if not authenticated */}
@@ -53,19 +54,20 @@ export function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/weakness"
-            element={
-              <ProtectedRoute>
-                <WeaknessCheck />
-              </ProtectedRoute>
-            }
-          />
+
           <Route
             path="/ranking"
             element={
               <ProtectedRoute>
                 <Ranking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/stats"
+            element={
+              <ProtectedRoute>
+                <GlobalStats />
               </ProtectedRoute>
             }
           />

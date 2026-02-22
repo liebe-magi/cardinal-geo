@@ -44,8 +44,12 @@ export function QuestionResult() {
   const wikiB = `https://${lang}.wikipedia.org/wiki/${cityBName}`;
 
   const handleNext = async () => {
+    // Determine if the current mode is a "survival-style" endless mode
+    // (Everything except challenge and learning)
+    const isEndlessMode = gameState.mode !== 'challenge' && gameState.mode !== 'learning';
+
     if (
-      gameState.mode === 'survival' &&
+      isEndlessMode &&
       gameState.history.length > 0 &&
       !gameState.history[gameState.history.length - 1]
     ) {

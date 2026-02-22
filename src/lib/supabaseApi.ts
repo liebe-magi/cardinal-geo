@@ -223,7 +223,7 @@ export async function createPendingMatch(
   userId: string,
   questionId: string,
   sessionId: string,
-  mode: 'survival_rated' | 'challenge_rated',
+  mode: string,
   userRatingBefore: number,
   questionRatingBefore: number,
 ): Promise<number | null> {
@@ -636,7 +636,7 @@ export async function updateWeaknessScoreDb(
   }
 
   const scores: Record<string, number> = (data?.weakness_scores as Record<string, number>) || {};
-  const delta = isCorrect ? -2 : 1;
+  const delta = isCorrect ? -1 : 1;
   scores[countryCodeA] = (scores[countryCodeA] || 0) + delta;
   scores[countryCodeB] = (scores[countryCodeB] || 0) + delta;
 

@@ -138,9 +138,7 @@ export function FinalResult() {
 
   // Rating change display
   const totalRatingChange = gameState.totalRatingChange;
-  const isRatedGame =
-    gameState.subMode === 'rated' &&
-    (gameState.mode === 'survival' || gameState.mode === 'challenge');
+  const isRatedGame = gameState.mode !== 'learning';
   const ratingBefore = gameState.ratingBefore;
   const ratingAfter = ratingBefore !== undefined ? ratingBefore + totalRatingChange : undefined;
 
@@ -368,15 +366,17 @@ export function FinalResult() {
         )}
 
         {/* Action buttons */}
-        <button
-          onClick={async () => {
-            await startGame(gameState.mode, gameState.subMode);
-            navigate('/quiz', { replace: true });
-          }}
-          className="btn-glow w-full py-3.5 rounded-xl text-base mb-2"
-        >
-          {t.ui.retry}
-        </button>
+        {gameState.mode !== 'challenge' && (
+          <button
+            onClick={async () => {
+              await startGame(gameState.mode, gameState.subMode);
+              navigate('/quiz', { replace: true });
+            }}
+            className="btn-glow w-full py-3.5 rounded-xl text-base mb-2"
+          >
+            {t.ui.retry}
+          </button>
+        )}
         <button
           onClick={() => navigate('/play')}
           className="w-full py-2.5 rounded-xl bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200 text-sm font-medium"

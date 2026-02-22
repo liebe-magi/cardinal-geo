@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { regionLabels, type Region } from '../lib/regions';
 import { getUTCDateString } from '../lib/seededRandom';
-import { fetchRatingRank, getChallengeUnratedAvgScore, getDailyProgress } from '../lib/supabaseApi';
+import { fetchRatingRank, getDailyProgress } from '../lib/supabaseApi';
 import { useAuthStore } from '../stores/authStore';
 import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -19,7 +19,7 @@ export function ModeSelect() {
   const [dailyStatus, setDailyStatus] = useState<'available' | 'in_progress' | 'completed'>(
     'available',
   );
-  const [challengeUnratedAvg, setChallengeUnratedAvg] = useState<string | null>(null);
+  const [dailyScore, setDailyScore] = useState<number | null>(null);
   const [rank, setRank] = useState<{ rank: number; total: number } | null>(null);
   const [countdown, setCountdown] = useState('');
 
@@ -38,21 +38,22 @@ export function ModeSelect() {
     }
   }, [isAuthenticated, profile, user, navigate]);
 
-  // Check daily challenge status & fetch challenge unrated avg & rank
+  // Check daily challenge status & fetch rank
   useEffect(() => {
     if (!isAuthenticated || !user) return;
     (async () => {
-      const [progress, avg, rankData] = await Promise.all([
+      const [progress, rankData] = await Promise.all([
         getDailyProgress(getUTCDateString()),
-        getChallengeUnratedAvgScore(user.id),
         fetchRatingRank(user.id),
       ]);
       if (progress) {
         setDailyStatus(progress.status === 'completed' ? 'completed' : 'in_progress');
+        if (progress.status === 'completed') {
+          setDailyScore(progress.score);
+        }
       } else {
         setDailyStatus('available');
       }
-      setChallengeUnratedAvg(avg !== null ? avg.toFixed(1) : null);
       setRank(rankData);
     })();
   }, [isAuthenticated, user]);
@@ -119,7 +120,7 @@ export function ModeSelect() {
       <div className="animate-fade-in space-y-5">
         {/* Hero rating card */}
         {isAuthenticated && profile && (
-          <div className="glass-card p-6 sm:p-8 text-center relative overflow-hidden">
+          <div className="glass-card mb-8 p-6 sm:p-8 text-center relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 pointer-events-none" />
             <div className="relative">
               <div className="text-text-secondary text-sm mb-2 tracking-wider uppercase font-medium">
@@ -157,181 +158,322 @@ export function ModeSelect() {
           </div>
         )}
 
-        {/* Game Modes Grid — responsive: stacked on mobile, side-by-side on PC */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Game Modes Stack */}
+        <div className="space-y-4">
           {/* Survival Mode Card */}
-          <div className="glass-card p-5 hover-lift">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xl">⚔️</span>
-              <h3 className="text-text-primary text-base font-bold">{t.modes.survival}</h3>
-            </div>
-            <p className="text-text-secondary text-xs mb-4 leading-relaxed">
-              {t.modeDesc.survival}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => handleStart('survival', 'rated')}
-                className={`group relative p-4 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                  isAuthenticated
-                    ? 'bg-gradient-to-br from-primary/15 to-primary/5 text-primary border border-primary/20 hover:border-primary/40 hover:shadow-[0_0_16px_rgba(34,211,238,0.1)] cursor-pointer'
-                    : 'bg-surface-light/50 text-text-secondary border border-white/5 cursor-not-allowed opacity-60'
-                }`}
-              >
-                <div className="font-bold">{t.subModes.rated}</div>
-                <div className="text-xs mt-1 opacity-50">{t.modeDesc.survival_rated}</div>
-                {isAuthenticated && profile && (
-                  <div className="text-xs mt-1.5 opacity-60">
-                    🏆 {t.ui.highScore}: {profile.best_score_survival_rated ?? 0}
-                  </div>
-                )}
-                {!isAuthenticated && (
-                  <div className="text-xs mt-1.5 opacity-70">🔒 {t.ui.loginRequired}</div>
-                )}
-              </button>
-              <button
-                onClick={() => handleStart('survival', 'unrated')}
-                className="group p-4 rounded-xl font-semibold text-sm bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200"
-              >
-                <div className="font-bold">{t.subModes.unrated}</div>
-                <div className="text-xs mt-1 opacity-50">{t.modeDesc.survival_unrated}</div>
-                {isAuthenticated && profile && (
-                  <div className="text-xs mt-1.5 opacity-60">
-                    🏆 {t.ui.highScore}: {profile.best_score_survival_unrated ?? 0}
-                  </div>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Challenge Mode Card */}
-          <div className="glass-card p-5 hover-lift">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xl">🎯</span>
-              <h3 className="text-text-primary text-base font-bold">{t.modes.challenge}</h3>
-            </div>
-            <p className="text-text-secondary text-xs mb-4 leading-relaxed">
-              {t.modeDesc.challenge}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => handleStart('challenge', 'rated')}
-                disabled={dailyStatus === 'completed'}
-                className={`group p-4 rounded-xl font-semibold text-sm transition-all duration-200 ${
-                  dailyStatus === 'completed'
-                    ? 'bg-surface-light/30 text-text-secondary border border-white/5 cursor-not-allowed opacity-50'
-                    : isAuthenticated
-                      ? 'bg-gradient-to-br from-primary/15 to-primary/5 text-primary border border-primary/20 hover:border-primary/40 hover:shadow-[0_0_16px_rgba(34,211,238,0.1)] cursor-pointer'
-                      : 'bg-surface-light/50 text-text-secondary border border-white/5 cursor-not-allowed opacity-60'
-                }`}
-              >
-                <div className="font-bold">{t.subModes.daily}</div>
-                <div className="text-xs mt-1 opacity-50">{t.modeDesc.challenge_daily}</div>
-                <div className="text-xs mt-1.5 opacity-70">
-                  {dailyStatus === 'completed'
-                    ? `✅ ${t.ui.alreadyPlayedToday}`
-                    : dailyStatus === 'in_progress'
-                      ? `▶ ${t.ui.resumeChallenge}`
-                      : ''}
-                </div>
-                {!isAuthenticated && (
-                  <div className="text-xs mt-1 opacity-70">🔒 {t.ui.loginRequired}</div>
-                )}
-              </button>
-              <button
-                onClick={() => handleStart('challenge', 'unrated')}
-                className="group p-4 rounded-xl font-semibold text-sm bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200"
-              >
-                <div className="font-bold">{t.subModes.tenQs}</div>
-                <div className="text-xs mt-1 opacity-50">{t.modeDesc.challenge_unrated}</div>
-                {isAuthenticated && (
-                  <div className="text-xs mt-1.5 opacity-60">
-                    📈 {t.ui.avgScore}: {challengeUnratedAvg !== null ? challengeUnratedAvg : '-'}
-                  </div>
-                )}
-              </button>
-            </div>
-            {/* Daily reset countdown */}
-            <div className="mt-3 text-center text-xs text-text-secondary opacity-70 space-y-0.5">
-              <div>{t.ui.dailyResetTime.replace('{tz}', tzAbbr).replace('{time}', localTime)}</div>
-              <div>
-                🔄 {t.ui.dailyResetIn}:{' '}
-                <span className="font-mono font-semibold text-primary/80">{countdown}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Starter (Famous Cities) Mode */}
-        <button
-          onClick={() => handleStart('starter', 'unrated')}
-          className="glass-card w-full p-5 text-left transition-all duration-200 group hover-lift cursor-pointer shadow-[0_0_15px_rgba(251,191,36,0.15)] border-accent/20"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xl">🌟</span>
-            <span className="text-text-primary text-base font-bold text-accent">
-              {t.modes.starter}
-            </span>
-          </div>
-          <p className="text-text-secondary text-xs leading-relaxed m-0">{t.modeDesc.starter}</p>
-        </button>
-
-        {/* Region Mode */}
-        <div className="glass-card p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">🌍</span>
-            <h3 className="text-text-primary text-base font-bold">{t.modes.region}</h3>
-          </div>
-          <p className="text-text-secondary text-xs mb-4 leading-relaxed">{t.modeDesc.region}</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {(Object.keys(regionLabels) as Region[]).map((region) => (
-              <button
-                key={region}
-                onClick={() => handleStart(region as GameMode, 'unrated')}
-                className="group p-3 rounded-xl font-semibold text-xs bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200 text-center"
-              >
-                {regionLabels[region][lang]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Learning Mode */}
-        <button
-          onClick={() => isAuthenticated && handleStart('learning', 'unrated')}
-          className={`glass-card w-full p-5 text-left transition-all duration-200 group ${
-            isAuthenticated ? 'hover-lift cursor-pointer' : 'cursor-not-allowed opacity-60'
-          }`}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xl">📚</span>
-            <span className="text-text-primary text-base font-bold">{t.modes.learning}</span>
-          </div>
-          <p className="text-text-secondary text-xs leading-relaxed m-0">{t.modeDesc.learning}</p>
-          {!isAuthenticated && (
-            <div className="text-xs mt-1.5 opacity-70">🔒 {t.ui.loginRequired}</div>
-          )}
-        </button>
-
-        {/* Footer buttons */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
           <button
-            onClick={() => navigate('/ranking')}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm bg-gradient-to-r from-accent/15 to-accent/5 text-accent border border-accent/20 hover:border-accent/40 hover:shadow-[0_0_16px_rgba(251,191,36,0.1)] cursor-pointer transition-all duration-200 font-semibold"
-          >
-            <span>👑</span>
-            {t.ui.ranking}
-          </button>
-          <button
-            onClick={() => (isAuthenticated ? navigate('/weakness') : navigate('/login'))}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm transition-all duration-200 font-medium ${
+            onClick={() => handleStart('survival', 'rated')}
+            className={`w-full text-left relative overflow-hidden rounded-2xl p-5 sm:p-6 transition-all duration-300 group ${
               isAuthenticated
-                ? 'bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer'
-                : 'bg-surface-light/30 text-text-secondary border border-white/5 cursor-not-allowed opacity-60'
+                ? 'bg-gradient-to-br from-primary/20 via-primary/5 to-transparent border border-primary/30 hover:border-primary/50 hover:shadow-[0_0_25px_rgba(34,211,238,0.2)] hover:-translate-y-1 cursor-pointer'
+                : 'bg-surface-light/30 border border-white/5 cursor-not-allowed opacity-70'
             }`}
           >
-            <span>{isAuthenticated ? '📊' : '🔒'}</span>
-            {t.ui.weaknessCheck}
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <span className="text-8xl">⚔️</span>
+            </div>
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">⚔️</span>
+                <h3 className="text-text-primary text-xl font-bold">{t.modes.survival}</h3>
+                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary uppercase tracking-widest border border-primary/30">
+                  Rated
+                </span>
+              </div>
+              <p className="text-text-secondary text-sm mb-4 leading-relaxed max-w-[85%]">
+                {t.modeDesc.survival}
+              </p>
+
+              <div className="mt-auto flex items-center gap-4">
+                {isAuthenticated && profile ? (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/20 border border-white/10 text-sm">
+                    <span className="text-accent">🏆</span>
+                    <span className="text-text-secondary">{t.ui.highScore}:</span>
+                    <span className="font-bold text-text-primary">
+                      {profile.best_score_survival_rated ?? 0}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-error/10 border border-error/20 text-error text-sm font-medium">
+                    🔒 {t.ui.loginRequired}
+                  </div>
+                )}
+              </div>
+            </div>
           </button>
+
+          {/* Daily Challenge Card */}
+          <button
+            onClick={async () => {
+              if (dailyStatus === 'completed') {
+                const success = await useGameStore.getState().reviewDailyResult();
+                if (success) {
+                  navigate('/result/final', { replace: true });
+                }
+              } else {
+                handleStart('challenge', 'rated');
+              }
+            }}
+            disabled={!isAuthenticated && dailyStatus === 'completed'} // Only disabled if not authenticated
+            className={`w-full text-left relative overflow-hidden rounded-2xl p-5 sm:p-6 transition-all duration-300 group ${
+              dailyStatus === 'completed'
+                ? 'bg-surface-light/30 border border-white/10 hover:border-white/20 hover:bg-surface-light/40 hover:-translate-y-1 cursor-pointer'
+                : isAuthenticated
+                  ? 'bg-gradient-to-br from-secondary/20 via-secondary/5 to-transparent border border-secondary/30 hover:border-secondary/50 hover:shadow-[0_0_25px_rgba(236,72,153,0.2)] hover:-translate-y-1 cursor-pointer'
+                  : 'bg-surface-light/30 border border-white/5 cursor-not-allowed opacity-70'
+            }`}
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300">
+              <span className="text-8xl">🎯</span>
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">🎯</span>
+                <h3 className="text-text-primary text-xl font-bold">{t.modes.challenge}</h3>
+                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary/20 text-secondary uppercase tracking-widest border border-secondary/30">
+                  Rated
+                </span>
+              </div>
+              <p className="text-text-secondary text-sm mb-4 leading-relaxed max-w-[85%]">
+                {t.modeDesc.challenge}
+              </p>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {isAuthenticated ? (
+                  <div
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium ${
+                      dailyStatus === 'completed'
+                        ? 'bg-success/10 border-success/20 text-success'
+                        : dailyStatus === 'in_progress'
+                          ? 'bg-warning/10 border-warning/20 text-warning'
+                          : 'bg-black/20 border-white/10 text-text-primary'
+                    }`}
+                  >
+                    {dailyStatus === 'completed'
+                      ? `✅ ${t.ui.alreadyPlayedToday || 'プレイ済み'} (Score: ${dailyScore}/10) - 結果を見る`
+                      : dailyStatus === 'in_progress'
+                        ? `▶ ${t.ui.resumeChallenge}`
+                        : '▶ 今日の課題に挑戦'}
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-error/10 border border-error/20 text-error text-sm font-medium">
+                    🔒 {t.ui.loginRequired}
+                  </div>
+                )}
+
+                {/* Timer directly in the button footer */}
+                <div className="text-right text-xs text-text-secondary opacity-80">
+                  <div>
+                    {t.ui.dailyResetTime.replace('{tz}', tzAbbr).replace('{time}', localTime)}
+                  </div>
+                  <div className="font-mono mt-0.5 font-semibold text-secondary/90">
+                    🔄 {countdown}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Starter Mode */}
+            <button
+              onClick={() => handleStart('starter', 'rated')}
+              className={`w-full text-left relative overflow-hidden rounded-2xl p-5 transition-all duration-300 group ${
+                isAuthenticated
+                  ? 'bg-gradient-to-br from-accent/15 via-accent/5 to-transparent border border-accent/20 hover:border-accent/40 hover:shadow-[0_0_20px_rgba(251,191,36,0.15)] hover:-translate-y-1 cursor-pointer'
+                  : 'bg-surface-light/30 border border-white/5 cursor-not-allowed opacity-70'
+              }`}
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
+                <span className="text-[6rem] leading-none">🌟</span>
+              </div>
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">🌟</span>
+                  <span className="text-text-primary text-lg font-bold text-accent">
+                    {t.modes.starter}
+                  </span>
+                  <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-accent/20 text-accent uppercase tracking-widest border border-accent/30">
+                    Rated
+                  </span>
+                </div>
+                <p className="text-text-secondary text-sm leading-relaxed mb-3">
+                  {t.modeDesc.starter}
+                </p>
+                {!isAuthenticated && (
+                  <div className="text-xs text-error font-medium mt-auto">
+                    🔒 {t.ui.loginRequired}
+                  </div>
+                )}
+              </div>
+            </button>
+
+            {/* Learning Mode */}
+            <button
+              onClick={() => isAuthenticated && handleStart('learning', 'unrated')}
+              className={`w-full text-left relative overflow-hidden rounded-2xl p-5 transition-all duration-300 group ${
+                isAuthenticated
+                  ? 'bg-surface-light/40 border border-white/10 hover:border-white/20 hover:bg-surface-light/60 hover:-translate-y-1 cursor-pointer'
+                  : 'bg-surface-light/20 border border-white/5 cursor-not-allowed opacity-70'
+              }`}
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
+                <span className="text-[6rem] leading-none">📚</span>
+              </div>
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">📚</span>
+                  <span className="text-text-primary text-lg font-bold">{t.modes.learning}</span>
+                  <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-surface-light/80 text-text-secondary uppercase tracking-widest border border-white/10">
+                    Practice
+                  </span>
+                </div>
+                <p className="text-text-secondary text-sm leading-relaxed mb-3">
+                  {t.modeDesc.learning}
+                </p>
+                {!isAuthenticated && (
+                  <div className="text-xs text-error font-medium mt-auto">
+                    🔒 {t.ui.loginRequired}
+                  </div>
+                )}
+              </div>
+            </button>
+          </div>
+
+          {/* Region Mode */}
+          <div className="glass-card p-5 border border-white/10 rounded-2xl relative overflow-hidden group">
+            <div className="absolute -top-4 -right-2 p-4 opacity-10 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none">
+              <span className="text-[8rem] leading-none">🌍</span>
+            </div>
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">🌍</span>
+                <h3 className="text-text-primary text-lg font-bold">{t.modes.region}</h3>
+                <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/20 text-primary uppercase tracking-widest border border-primary/30">
+                  Rated
+                </span>
+              </div>
+              <p className="text-text-secondary text-sm mb-4 leading-relaxed">
+                {t.modeDesc.region}
+              </p>
+
+              {!isAuthenticated ? (
+                <div className="p-4 rounded-xl bg-error/5 border border-error/10 text-error text-sm font-medium text-center">
+                  🔒 {t.ui.loginRequired}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {(Object.keys(regionLabels) as Region[]).map((region) => (
+                    <button
+                      key={region}
+                      onClick={() => handleStart(region as GameMode, 'rated')}
+                      className="p-3 rounded-xl font-semibold text-xs sm:text-sm bg-black/20 text-text-primary border border-white/10 hover:border-primary/40 hover:bg-primary/5 hover:text-primary cursor-pointer transition-all duration-200 text-center"
+                    >
+                      {regionLabels[region][lang]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer buttons */}
+        <div className="flex flex-col gap-4 pt-1 mt-4">
+          {/* Main Ranking Button */}
+          <button
+            onClick={() => navigate('/ranking')}
+            className="group relative w-full flex items-center justify-between px-5 sm:px-6 py-4 rounded-2xl bg-gradient-to-br from-accent/20 via-surface-light/40 to-surface-light/10 border border-accent/30 hover:border-accent/60 cursor-pointer transition-all duration-300 overflow-hidden hover:shadow-[0_0_30px_rgba(251,191,36,0.15)] hover:-translate-y-0.5"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-accent/0 via-accent/5 to-accent/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <div className="flex items-center gap-4 relative z-10 w-full">
+              <div className="w-12 h-12 shrink-0 rounded-full bg-accent/20 flex items-center justify-center text-2xl border border-accent/30 group-hover:scale-110 transition-transform duration-300 shadow-[0_0_15px_rgba(251,191,36,0.2)]">
+                👑
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <div className="text-accent-light font-bold text-base sm:text-lg tracking-wide group-hover:text-accent transition-colors truncate">
+                  {t.ui.ranking || 'ランキング'}
+                </div>
+                <div className="text-accent/70 text-[10px] sm:text-xs font-semibold mt-0.5 uppercase tracking-wider truncate">
+                  Global Leaderboard
+                </div>
+              </div>
+            </div>
+            <div className="text-accent/50 group-hover:text-accent group-hover:translate-x-1 transition-all duration-300 relative z-10 ml-2">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Stats & Profile Row */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {/* Global Stats Button */}
+            <button
+              onClick={() => navigate('/stats')}
+              className="group relative flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-br from-blue-500/10 to-surface-light/20 border border-blue-500/20 hover:border-blue-400/50 cursor-pointer transition-all duration-300 overflow-hidden hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] hover:-translate-y-0.5"
+            >
+              <div className="w-10 h-10 shrink-0 rounded-full bg-blue-500/20 flex items-center justify-center text-xl border border-blue-500/30 group-hover:scale-110 transition-transform duration-300">
+                🌍
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <div className="text-blue-100 font-bold text-sm sm:text-base group-hover:text-blue-300 transition-colors truncate">
+                  {t.ui.globalStats || '全体統計'}
+                </div>
+                <div className="text-blue-400/60 text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold mt-0.5 truncate">
+                  Analytics
+                </div>
+              </div>
+            </button>
+
+            {/* Profile Button */}
+            <button
+              onClick={() => (isAuthenticated ? navigate('/profile') : navigate('/login'))}
+              className={`group relative flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all duration-300 overflow-hidden ${
+                isAuthenticated
+                  ? 'bg-gradient-to-br from-emerald-500/10 to-surface-light/20 border-emerald-500/20 hover:border-emerald-400/50 cursor-pointer hover:shadow-[0_0_20px_rgba(16,185,129,0.15)] hover:-translate-y-0.5'
+                  : 'bg-surface-light/20 border-white/5 opacity-70 cursor-not-allowed hover:bg-surface-light/30'
+              }`}
+            >
+              <div
+                className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-xl border transition-transform duration-300 ${
+                  isAuthenticated
+                    ? 'bg-emerald-500/20 border-emerald-500/30 group-hover:scale-110'
+                    : 'bg-white/5 border-white/10 grayscale'
+                }`}
+              >
+                {isAuthenticated ? '👤' : '🔒'}
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <div
+                  className={`font-bold text-sm sm:text-base transition-colors truncate ${
+                    isAuthenticated
+                      ? 'text-emerald-100 group-hover:text-emerald-300'
+                      : 'text-text-secondary'
+                  }`}
+                >
+                  {t.ui.profile || 'マイデータ'}
+                </div>
+                <div
+                  className={`text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold mt-0.5 truncate ${
+                    isAuthenticated ? 'text-emerald-400/60' : 'text-white/20'
+                  }`}
+                >
+                  My Profile
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
     </>
