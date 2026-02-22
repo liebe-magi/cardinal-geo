@@ -479,15 +479,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // We recreate the state necessary for FinalResult to display
     const reconstructedHistory: boolean[] = [];
-    const reconstructedQuestionHistory = progress.answers.map((ans: Record<string, unknown>) => {
+    const reconstructedQuestionHistory = progress.answers.map((item: unknown) => {
+      const ans = item as Record<string, unknown>;
       reconstructedHistory.push(ans.isCorrect as boolean);
 
       return {
         isCorrect: ans.isCorrect as boolean,
         isPartialCorrect: ans.isPartialCorrect as boolean | undefined,
         ratingChange: ans.ratingChange as number | undefined,
-        userAnswer: ans.userAnswer as string,
-        correctDirection: ans.correctDirection as string | null,
+        userAnswer: ans.userAnswer as QuadDirection,
+        correctDirection: ans.correctDirection as QuadDirection,
         cityA: cities.find((c) => c.countryCode === ans.cityACode)!,
         cityB: cities.find((c) => c.countryCode === ans.cityBCode)!,
       };

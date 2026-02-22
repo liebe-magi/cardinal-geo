@@ -240,20 +240,28 @@ export function ModeSelect() {
 
               <div className="flex flex-wrap items-center justify-between gap-3">
                 {isAuthenticated ? (
-                  <div
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium ${
-                      dailyStatus === 'completed'
-                        ? 'bg-success/10 border-success/20 text-success'
-                        : dailyStatus === 'in_progress'
-                          ? 'bg-warning/10 border-warning/20 text-warning'
-                          : 'bg-black/20 border-white/10 text-text-primary'
-                    }`}
-                  >
-                    {dailyStatus === 'completed'
-                      ? `✅ ${t.ui.alreadyPlayedToday || 'プレイ済み'} (Score: ${dailyScore}/10) - 結果を見る`
-                      : dailyStatus === 'in_progress'
-                        ? `▶ ${t.ui.resumeChallenge}`
-                        : '▶ 今日の課題に挑戦'}
+                  <div className="flex items-center gap-3">
+                    {dailyStatus === 'completed' ? (
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/20 border border-white/10 text-sm">
+                        <span className="text-secondary">🏆</span>
+                        <span className="text-text-secondary">{t.ui.score}:</span>
+                        <span className="font-bold text-text-primary text-base">
+                          {dailyScore}/10
+                        </span>
+                      </div>
+                    ) : (
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium ${
+                          dailyStatus === 'in_progress'
+                            ? 'bg-warning/10 border-warning/20 text-warning'
+                            : 'bg-black/20 border-white/10 text-text-primary'
+                        }`}
+                      >
+                        {dailyStatus === 'in_progress'
+                          ? `▶ ${t.ui.resumeChallenge}`
+                          : '▶ 今日の課題に挑戦'}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-error/10 border border-error/20 text-error text-sm font-medium">

@@ -15,7 +15,7 @@ export const translations = {
         '間違えるまでひたすら回答し続けるサバイバル形式。全198カ国の位置関係を直感に刻み込もう',
       survival_rated: 'レーティングに影響',
       survival_unrated: '気軽に練習',
-      challenge: '1日1回限定！全プレイヤー共通の10問に挑戦して、今日の正答数とスコアを競い合おう',
+      challenge: '1日1回限定！全プレイヤー共通の10問に挑戦して、今日のスコアを競い合おう',
       challenge_daily: '日替わりチャレンジ',
       challenge_unrated: 'ランダム10問で腕試し',
       learning: '間違えた問題を優先して出題する復習用モード（レーティング変動なし）',
