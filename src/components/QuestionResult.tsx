@@ -76,7 +76,7 @@ export function QuestionResult() {
                   : 'Mode';
   const currentModeRating =
     ratingMode === 'global'
-      ? Math.round(profile?.modeRatings?.global?.rating ?? profile?.rating ?? 1500)
+      ? Math.round(profile?.modeRatings?.global?.rating ?? 1500)
       : Math.round(profile?.modeRatings?.[ratingMode]?.rating ?? 1500);
   const showModeRating =
     gameState.subMode === 'rated' && gameState.mode !== 'learning' && isAuthenticated;
@@ -131,23 +131,19 @@ export function QuestionResult() {
           </div>
         </div>
 
-        {/* Score badge */}
-        <div className="flex justify-center mb-5">
+        {/* Score & Rating badges */}
+        <div className="flex justify-center gap-3 mb-5 flex-wrap">
           <div className="bg-surface-light/60 border border-white/5 px-5 py-2.5 rounded-full">
             <span className="text-text-secondary text-sm mr-2">{t.ui.score}</span>
             <span className="text-xl font-bold text-text-primary">{gameState.score}</span>
           </div>
-        </div>
-
-        {/* Current mode rating */}
-        {showModeRating && (
-          <div className="flex justify-center mb-5">
+          {showModeRating && (
             <div className="bg-surface-light/60 border border-white/5 px-5 py-2.5 rounded-full">
               <span className="text-text-secondary text-sm mr-2">🏅 {ratingModeLabel}</span>
               <span className="text-xl font-bold text-text-primary">{currentModeRating}</span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Direction comparison — side by side on wider screens */}
         <div className="grid grid-cols-2 gap-3 mb-5">

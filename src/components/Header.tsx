@@ -7,7 +7,7 @@ export function Header() {
   const { isAuthenticated, profile } = useAuthStore();
   const navigate = useNavigate();
 
-  const displayRating = profile?.modeRatings?.global?.rating ?? profile?.rating ?? 1500;
+  const displayRating = profile?.modeRatings?.global?.rating ?? 1500;
 
   return (
     <header className="flex justify-between items-center mb-6 py-3 px-4 -mx-4 sm:-mx-6 lg:-mx-8 rounded-b-2xl bg-surface/60 backdrop-blur-md border-b border-white/5">

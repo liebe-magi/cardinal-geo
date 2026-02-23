@@ -120,7 +120,7 @@ export function ModeSelect() {
   const getModeRating = (modeKey: 'global' | 'starter_rated' | `${Region}_rated`): number => {
     if (!profile) return 1500;
     if (modeKey === 'global') {
-      return Math.round(profile.modeRatings?.global?.rating ?? profile.rating ?? 1500);
+      return Math.round(profile.modeRatings?.global?.rating ?? 1500);
     }
     return Math.round(profile.modeRatings?.[modeKey]?.rating ?? 1500);
   };
@@ -141,7 +141,7 @@ export function ModeSelect() {
                 Global Rating
               </span>
               <div className="text-5xl sm:text-6xl font-extrabold bg-gradient-to-r from-primary via-cyan-300 to-primary bg-clip-text text-transparent leading-none">
-                {Math.round(profile.modeRatings?.global?.rating ?? profile.rating)}
+                {Math.round(profile.modeRatings?.global?.rating ?? 1500)}
               </div>
               {rank && (
                 <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-light/60 border border-white/10 text-xs sm:text-sm text-text-secondary font-semibold">

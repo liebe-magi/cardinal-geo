@@ -98,7 +98,7 @@ export function Profile() {
   const buildShareText = useCallback(() => {
     if (!profile) return '';
     const lines: string[] = ['🧭 Cardinal Geo', ''];
-    lines.push(`⭐ Rating: ${Math.round(profile.modeRatings?.global?.rating ?? profile.rating)}`);
+    lines.push(`⭐ Rating: ${Math.round(profile.modeRatings?.global?.rating ?? 1500)}`);
     if (rank) {
       const medal = rank.rank <= 3 ? ['🥇', '🥈', '🥉'][rank.rank - 1] : '📊';
       lines.push(`${medal} ${t.ui.ratingRank}: ${rank.rank} / ${rank.total}`);
@@ -339,11 +339,11 @@ export function Profile() {
                 {globalRatingLabel}
               </span>
               <div className="text-5xl font-extrabold bg-gradient-to-r from-primary via-cyan-300 to-primary bg-clip-text text-transparent leading-none mb-2">
-                {Math.round(profile.modeRatings?.['global']?.rating ?? profile.rating ?? 1500)}
+                {Math.round(profile.modeRatings?.['global']?.rating ?? 1500)}
               </div>
               <div className="text-xs text-text-secondary font-mono">
-                RD: {Math.round(profile.modeRatings?.['global']?.rd ?? profile.rd ?? 350)} / Vol:{' '}
-                {(profile.modeRatings?.['global']?.vol ?? profile.vol ?? 0.06).toFixed(4)}
+                RD: {Math.round(profile.modeRatings?.['global']?.rd ?? 350)} / Vol:{' '}
+                {(profile.modeRatings?.['global']?.vol ?? 0.06).toFixed(4)}
               </div>
               {rank && (
                 <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-light/60 border border-white/10 text-xs sm:text-sm text-text-secondary font-semibold">
@@ -474,7 +474,7 @@ export function Profile() {
             </div>
             <RatingChart
               userId={profile.id}
-              currentRating={profile.modeRatings?.global?.rating ?? profile.rating}
+              currentRating={profile.modeRatings?.global?.rating ?? 1500}
             />
           </div>
         </div>

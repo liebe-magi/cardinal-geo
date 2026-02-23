@@ -159,67 +159,56 @@ export function FinalResult() {
           </p>
         )}
 
-        {/* Score */}
-        <div className="text-center mb-5">
-          <span className="text-5xl sm:text-6xl font-extrabold bg-gradient-to-r from-primary via-cyan-300 to-primary bg-clip-text text-transparent">
-            {gameState.score}
-          </span>
-          <div className="text-text-secondary text-sm mt-1.5 uppercase tracking-wider font-medium">
-            {t.ui.score}
-          </div>
-          {totalRatingChange !== 0 && (
-            <div
-              className={`text-sm font-bold mt-1.5 ${totalRatingChange >= 0 ? 'text-success' : 'text-error'}`}
-            >
-              {totalRatingChange >= 0 ? '+' : ''}
-              {Math.round(totalRatingChange)} Rate
+        {/* Score & Rating */}
+        <div className="flex items-center justify-center gap-4 sm:gap-6 mb-5">
+          {/* Score */}
+          <div className="text-center">
+            <span className="text-5xl sm:text-6xl font-extrabold bg-gradient-to-r from-primary via-cyan-300 to-primary bg-clip-text text-transparent">
+              {gameState.score}
+            </span>
+            <div className="text-text-secondary text-sm mt-1.5 uppercase tracking-wider font-medium">
+              {t.ui.score}
             </div>
+          </div>
+
+          {/* Rating before → after */}
+          {isRatedGame && ratingBefore !== undefined && ratingAfter !== undefined && (
+            <>
+              <div className="w-px h-16 bg-white/10" />
+              <div className="flex items-center gap-3">
+                <div className="text-center">
+                  <div className="text-xs text-text-secondary mb-0.5">{t.ui.ratingBefore}</div>
+                  <div className="text-2xl font-bold text-text-primary">
+                    {Math.round(ratingBefore)}
+                  </div>
+                </div>
+                <div className="text-text-secondary text-xl">→</div>
+                <div className="text-center">
+                  <div className="text-xs text-text-secondary mb-0.5">{t.ui.ratingAfter}</div>
+                  <div
+                    className={`text-2xl font-bold ${totalRatingChange >= 0 ? 'text-success' : 'text-error'}`}
+                  >
+                    {Math.round(ratingAfter)}
+                  </div>
+                </div>
+                <div
+                  className={`text-sm font-bold px-2.5 py-1 rounded-lg ${
+                    totalRatingChange >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
+                  }`}
+                >
+                  {totalRatingChange >= 0 ? '+' : ''}
+                  {Math.round(totalRatingChange)}
+                </div>
+              </div>
+            </>
           )}
         </div>
 
-        {/* Rating before → after card */}
-        {isRatedGame && ratingBefore !== undefined && ratingAfter !== undefined && (
-          <div className="mb-5 p-4 bg-surface-light/40 border border-white/5 rounded-xl">
-            <div className="text-xs text-text-secondary text-center mb-3 uppercase tracking-wider font-medium">
-              {t.ui.ratingChange}
-            </div>
-            <div className="flex items-center justify-center gap-3">
-              <div className="text-center">
-                <div className="text-xs text-text-secondary mb-0.5">{t.ui.ratingBefore}</div>
-                <div className="text-2xl font-bold text-text-primary">
-                  {Math.round(ratingBefore)}
-                </div>
-              </div>
-              <div className="text-text-secondary text-xl">→</div>
-              <div className="text-center">
-                <div className="text-xs text-text-secondary mb-0.5">{t.ui.ratingAfter}</div>
-                <div
-                  className={`text-2xl font-bold ${totalRatingChange >= 0 ? 'text-success' : 'text-error'}`}
-                >
-                  {Math.round(ratingAfter)}
-                </div>
-              </div>
-              <div
-                className={`text-sm font-bold px-2.5 py-1 rounded-lg ${
-                  totalRatingChange >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'
-                }`}
-              >
-                {totalRatingChange >= 0 ? '+' : ''}
-                {Math.round(totalRatingChange)}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-2 gap-3 mb-5">
           <div className="bg-surface-light/60 border border-white/5 rounded-xl p-4 text-center">
             <div className="text-xl sm:text-2xl font-bold text-text-primary">{totalQuestions}</div>
             <div className="text-xs text-text-secondary mt-1">{t.ui.totalQuestions}</div>
-          </div>
-          <div className="bg-surface-light/60 border border-white/5 rounded-xl p-4 text-center">
-            <div className="text-xl sm:text-2xl font-bold text-success">{correctCount}</div>
-            <div className="text-xs text-text-secondary mt-1">{t.ui.correctCount}</div>
           </div>
           <div className="bg-surface-light/60 border border-white/5 rounded-xl p-4 text-center">
             <div className="text-xl sm:text-2xl font-bold text-text-primary">{accuracy}%</div>

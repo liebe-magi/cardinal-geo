@@ -25,7 +25,7 @@ export function StatsBar({ gameState }: StatsBarProps) {
   const modeRating = profile?.modeRatings?.[ratingMode];
   const currentRating =
     ratingMode === 'global'
-      ? Math.round(modeRating?.rating ?? profile?.rating ?? 1500)
+      ? Math.round(modeRating?.rating ?? 1500)
       : Math.round(modeRating?.rating ?? 1500);
 
   const ratingModeLabel =

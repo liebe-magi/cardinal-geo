@@ -7,9 +7,6 @@ import { migrateLocalDataToDb } from '../lib/supabaseApi';
 export interface Profile {
   id: string;
   username: string;
-  rating: number;
-  rd: number;
-  vol: number;
   modeRatings: Record<string, { rating: number; rd: number; vol: number }>;
   best_score_survival_rated: number;
   best_score_survival_unrated: number;

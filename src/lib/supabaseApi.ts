@@ -84,13 +84,6 @@ export async function settlePendingMatches(userId: string): Promise<number> {
 
   let settledCount = 0;
 
-  // Legacy fallback for users who may not yet have a global mode row.
-  const { data: profileData } = await supabase
-    .from('profiles')
-    .select('rating, rd, vol')
-    .eq('id', userId)
-    .single();
-
   // 2. Get current user mode ratings
   const { data: modeRatingsData } = await supabase
     .from('user_mode_ratings')
@@ -108,15 +101,11 @@ export async function settlePendingMatches(userId: string): Promise<number> {
   for (const match of pendingMatches) {
     const mode = match.mode;
     const ratingMode = mode === 'survival_rated' || mode === 'challenge_rated' ? 'global' : mode;
-    const currentPlayerRating: GlickoRating =
-      modeRatings[ratingMode] ||
-      (ratingMode === 'global' && profileData
-        ? { rating: profileData.rating, rd: profileData.rd, vol: profileData.vol }
-        : {
-            rating: 1500,
-            rd: 350,
-            vol: 0.06,
-          });
+    const currentPlayerRating: GlickoRating = modeRatings[ratingMode] || {
+      rating: 1500,
+      rd: 350,
+      vol: 0.06,
+    };
 
     // Fetch current question rating
     const { data: questionData } = await supabase
@@ -247,22 +236,24 @@ export async function createPendingMatch(
   mode: string,
   userRatingBefore: number,
   questionRatingBefore: number,
+  userRdBefore?: number,
+  userVolBefore?: number,
 ): Promise<number | null> {
   if (!supabase) return null;
 
-  const { data, error } = await supabase
-    .from('match_history')
-    .insert({
-      user_id: userId,
-      question_id: questionId,
-      session_id: sessionId,
-      mode,
-      status: 'pending',
-      user_rating_before: userRatingBefore,
-      question_rating_before: questionRatingBefore,
-    })
-    .select('id')
-    .single();
+  const row: Record<string, unknown> = {
+    user_id: userId,
+    question_id: questionId,
+    session_id: sessionId,
+    mode,
+    status: 'pending',
+    user_rating_before: userRatingBefore,
+    question_rating_before: questionRatingBefore,
+  };
+  if (userRdBefore != null) row.user_rd_before = userRdBefore;
+  if (userVolBefore != null) row.user_vol_before = userVolBefore;
+
+  const { data, error } = await supabase.from('match_history').insert(row).select('id').single();
 
   if (error) {
     console.error('Error creating pending match:', error);
@@ -292,6 +283,7 @@ export async function submitRatedAnswer(
     cityBCode: string;
     cityB: GlickoRating;
   } | null,
+  opponentSnapshot?: GlickoRating | null,
 ): Promise<boolean> {
   if (!supabase) return false;
 
@@ -314,6 +306,11 @@ export async function submitRatedAnswer(
     p_city_b_rating: cityUpdates?.cityB.rating ?? null,
     p_city_b_rd: cityUpdates?.cityB.rd ?? null,
     p_city_b_vol: cityUpdates?.cityB.vol ?? null,
+    p_opponent_rating: opponentSnapshot?.rating ?? null,
+    p_opponent_rd: opponentSnapshot?.rd ?? null,
+    p_opponent_vol: opponentSnapshot?.vol ?? null,
+    p_user_rd_after: newPlayerRating.rd,
+    p_user_vol_after: newPlayerRating.vol,
   });
 
   if (error) {

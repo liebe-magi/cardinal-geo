@@ -1,33 +1,24 @@
--- Hotfix: migrate per-mode ratings to Global model
--- Purpose:
--- 1) Move existing survival_rated rows to global (without data loss)
--- 2) Ensure submit_rated_answer maps survival/challenge to global
--- 3) Ensure get_rating_ranking('global') counts both survival + challenge matches
+-- =============================================================
+-- Step 2: match_history スナップショット列の追加
+-- 本番DB に SQL Editor で実行する
+-- =============================================================
+-- 目的: 事故発生時にレーティングを正確に再計算するために、
+--       対戦時点の全パラメータを記録する。
+--
+-- 全列 NULL 許容 → 旧アプリが動き続けても壊れない。
+-- =============================================================
 
--- ------------------------------------------------------------------
--- 1) Data fix: survival_rated -> global
--- ------------------------------------------------------------------
--- If a user already has a global row, keep that row and ignore survival copy.
-INSERT INTO public.user_mode_ratings (user_id, mode, rating, rd, vol, updated_at)
-SELECT user_id, 'global', rating, rd, vol, updated_at
-FROM public.user_mode_ratings
-WHERE mode = 'survival_rated'
-ON CONFLICT (user_id, mode) DO NOTHING;
+-- 2-a. 列の追加
+ALTER TABLE public.match_history
+  ADD COLUMN IF NOT EXISTS user_rd_before double precision,
+  ADD COLUMN IF NOT EXISTS user_vol_before double precision,
+  ADD COLUMN IF NOT EXISTS opponent_rating double precision,
+  ADD COLUMN IF NOT EXISTS opponent_rd double precision,
+  ADD COLUMN IF NOT EXISTS opponent_vol double precision,
+  ADD COLUMN IF NOT EXISTS user_rd_after double precision,
+  ADD COLUMN IF NOT EXISTS user_vol_after double precision;
 
--- Remove legacy survival_rated rows only when matching global row exists.
--- This avoids accidental data loss if a copy step is interrupted.
-DELETE FROM public.user_mode_ratings s
-WHERE s.mode = 'survival_rated'
-  AND EXISTS (
-    SELECT 1
-    FROM public.user_mode_ratings g
-    WHERE g.user_id = s.user_id
-      AND g.mode = 'global'
-  );
-
--- ------------------------------------------------------------------
--- 2) RPC fix: submit_rated_answer
--- ------------------------------------------------------------------
+-- 2-b. submit_rated_answer を更新（新列を受け取り保存）
 CREATE OR REPLACE FUNCTION public.submit_rated_answer(
   p_match_history_id bigint,
   p_is_correct boolean,
@@ -46,7 +37,13 @@ CREATE OR REPLACE FUNCTION public.submit_rated_answer(
   p_city_b_code text DEFAULT NULL,
   p_city_b_rating double precision DEFAULT NULL,
   p_city_b_rd double precision DEFAULT NULL,
-  p_city_b_vol double precision DEFAULT NULL
+  p_city_b_vol double precision DEFAULT NULL,
+  -- New snapshot parameters (all optional for backward compat)
+  p_opponent_rating double precision DEFAULT NULL,
+  p_opponent_rd double precision DEFAULT NULL,
+  p_opponent_vol double precision DEFAULT NULL,
+  p_user_rd_after double precision DEFAULT NULL,
+  p_user_vol_after double precision DEFAULT NULL
 )
 RETURNS void AS $$
 DECLARE
@@ -66,22 +63,28 @@ BEGIN
 
   v_mode := match_rec.mode;
 
-  -- Global rating should include both survival and challenge modes.
   IF v_mode IN ('survival_rated', 'challenge_rated') THEN
     v_rating_mode := 'global';
   ELSE
     v_rating_mode := v_mode;
   END IF;
 
+  -- Update match history (including new snapshot columns)
   UPDATE public.match_history
   SET
     status = CASE WHEN p_is_correct THEN 'win' ELSE 'lose' END,
     user_rating_after = p_new_user_rating,
     question_rating_after = p_new_question_rating,
     rating_change = p_rating_change,
-    answered_at = now()
+    answered_at = now(),
+    opponent_rating = COALESCE(p_opponent_rating, opponent_rating),
+    opponent_rd = COALESCE(p_opponent_rd, opponent_rd),
+    opponent_vol = COALESCE(p_opponent_vol, opponent_vol),
+    user_rd_after = COALESCE(p_user_rd_after, user_rd_after),
+    user_vol_after = COALESCE(p_user_vol_after, user_vol_after)
   WHERE id = p_match_history_id;
 
+  -- Update user rating in user_mode_ratings
   INSERT INTO public.user_mode_ratings (user_id, mode, rating, rd, vol)
   VALUES (auth.uid(), v_rating_mode, p_new_user_rating, p_new_user_rd, p_new_user_vol)
   ON CONFLICT (user_id, mode) DO UPDATE SET
@@ -89,6 +92,7 @@ BEGIN
     rd = EXCLUDED.rd,
     vol = EXCLUDED.vol;
 
+  -- Update question (pair) rating and stats
   UPDATE public.questions
   SET
     rating = p_new_question_rating,
@@ -99,6 +103,7 @@ BEGIN
     composite_rating = COALESCE(p_composite_rating, composite_rating)
   WHERE id = match_rec.question_id;
 
+  -- Update city ratings (if provided)
   IF p_city_a_code IS NOT NULL AND p_city_a_rating IS NOT NULL THEN
     INSERT INTO public.city_ratings (country_code, rating, rd, vol, play_count)
     VALUES (p_city_a_code, p_city_a_rating, p_city_a_rd, p_city_a_vol, 1)
@@ -119,6 +124,7 @@ BEGIN
       play_count = public.city_ratings.play_count + 1;
   END IF;
 
+  -- Update best survival score if applicable
   IF v_mode = 'survival_rated' THEN
     UPDATE public.profiles
     SET best_score_survival_rated = GREATEST(
@@ -135,32 +141,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- ------------------------------------------------------------------
--- 3) RPC fix: get_rating_ranking
--- ------------------------------------------------------------------
-DROP FUNCTION IF EXISTS public.get_rating_ranking();
+-- =============================================================
+-- 検証クエリ
+-- =============================================================
 
-CREATE OR REPLACE FUNCTION public.get_rating_ranking(p_mode text DEFAULT 'global')
-RETURNS TABLE(id uuid, username text, rating double precision, play_count bigint) AS $$
-BEGIN
-  RETURN QUERY
-    SELECT
-      p.id,
-      p.username,
-      umr.rating,
-      count(mh.id) AS play_count
-    FROM public.profiles p
-    JOIN public.user_mode_ratings umr
-      ON umr.user_id = p.id AND umr.mode = p_mode
-    LEFT JOIN public.match_history mh
-      ON mh.user_id = p.id
-      AND mh.status != 'pending'
-      AND (
-        (p_mode = 'global' AND mh.mode IN ('survival_rated', 'challenge_rated'))
-        OR (p_mode <> 'global' AND mh.mode = p_mode)
-      )
-    GROUP BY p.id, p.username, umr.rating
-    ORDER BY umr.rating DESC
-    LIMIT 100;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- 新列が追加されていることを確認
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'match_history'
+  AND column_name IN (
+    'user_rd_before', 'user_vol_before',
+    'opponent_rating', 'opponent_rd', 'opponent_vol',
+    'user_rd_after', 'user_vol_after'
+  )
+ORDER BY column_name;
+-- → 7 行

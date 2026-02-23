@@ -45,16 +45,7 @@ function getProfileRatingForMode(profile: Profile, mode: GameMode): GlickoRating
       vol: modeRating.vol,
     };
   }
-  // Global tracks survival/challenge together. If global doesn't exist yet,
-  // fall back to legacy profile rating.
-  if (ratingMode === 'global') {
-    return {
-      rating: profile.rating,
-      rd: profile.rd,
-      vol: profile.vol,
-    };
-  }
-  // Starter/region modes should start independently from default values.
+  // No mode-specific rating found — start from defaults.
   return {
     rating: 1500,
     rd: 350,
@@ -251,13 +242,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 ? 'starter_rated'
                 : `${gameState.mode}_rated`;
 
+        const profileRating = getProfileRatingForMode(authState.profile, gameState.mode);
         const matchId = await createPendingMatch(
           authState.user!.id,
           dbQuestion.id,
           gameState.sessionId,
           modeStr,
-          getProfileRatingForMode(authState.profile, gameState.mode).rating,
+          profileRating.rating,
           dbQuestion.rating,
+          profileRating.rd,
+          profileRating.vol,
         );
 
         if (matchId) {
@@ -387,6 +381,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         result.ratingChange,
         compositeOpponent.rating, // store composite rating for matchmaking
         cityUpdates,
+        compositeOpponent, // snapshot opponent rating/rd/vol for replay
       );
 
       // Refresh profile to get updated rating
