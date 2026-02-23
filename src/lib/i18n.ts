@@ -149,6 +149,11 @@ export const translations = {
       setupUsername: 'ユーザー名を設定',
       setupUsernameDesc: 'ランキングやプロフィールに表示されます',
       skip: 'スキップ',
+      privacyPolicy: 'プライバシーポリシー',
+      about: 'このアプリについて',
+      privacyAgreement: 'ログインすることでプライバシーポリシーに同意したものとみなされます。',
+      privacyAgreementLink: 'プライバシーポリシー',
+      contact: 'お問い合わせ',
     },
     directions: {
       N: '北',
@@ -336,6 +341,11 @@ export const translations = {
       setupUsername: 'Set Your Username',
       setupUsernameDesc: 'This will be shown in rankings and your profile',
       skip: 'Skip',
+      privacyPolicy: 'Privacy Policy',
+      about: 'About',
+      privacyAgreement: 'By signing in, you agree to our Privacy Policy.',
+      privacyAgreementLink: 'Privacy Policy',
+      contact: 'Contact',
     },
     directions: {
       N: 'N',

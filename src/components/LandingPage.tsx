@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -11,6 +11,7 @@ import { formatCoord, formatDirection } from '../lib/quiz';
 
 export function LandingPage() {
   const { t, lang } = useSettingsStore();
+  const formUrl = import.meta.env.VITE_CONTACT_FORM_URL;
   const { isAuthenticated } = useAuthStore();
   const {
     gameState,
@@ -503,6 +504,33 @@ export function LandingPage() {
           <div className="mt-8 transition-all duration-500 ease-in-out">{renderGameSection()}</div>
         </div>
       </div>
+
+      {/* Global Footer */}
+      <footer className="w-full py-8 mt-auto border-t border-white/5 bg-bg/40 backdrop-blur-sm relative z-10">
+        <div className="max-w-4xl mx-auto px-4 flex flex-col items-center justify-center gap-4">
+          <div className="flex items-center gap-6 text-sm text-text-secondary">
+            <Link to="/about" className="hover:text-primary transition-colors">
+              {t.ui.about}
+            </Link>
+            <Link to="/privacy" className="hover:text-primary transition-colors">
+              {t.ui.privacyPolicy}
+            </Link>
+            {formUrl && (
+              <a
+                href={formUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                {t.ui.contact}
+              </a>
+            )}
+          </div>
+          <div className="text-xs text-text-secondary/50">
+            &copy; {new Date().getFullYear()} Cardinal Geo. All rights reserved.
+          </div>
+        </div>
+      </footer>
     </>
   );
 }

@@ -1,9 +1,11 @@
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
+import { About } from './components/About';
 import { FinalResult } from './components/FinalResult';
 import { GlobalStats } from './components/GlobalStats';
 import { LandingPage } from './components/LandingPage';
 import { Login } from './components/Login';
 import { ModeSelect } from './components/ModeSelect';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { Profile } from './components/Profile';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { QuestionResult } from './components/QuestionResult';
@@ -18,6 +20,8 @@ export function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/weakness" element={<Navigate to="/profile" replace />} />
           <Route path="/login" element={<Login />} />
 

@@ -1,6 +1,5 @@
-import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { cities } from '../cities';
 import { fetchAllModeStats, fetchRatingRank, type ModeStats } from '../lib/supabaseApi';
 import { useAuthStore } from '../stores/authStore';
@@ -31,6 +30,7 @@ function getMarkerRadius(score: number): number {
 export function Profile() {
   const navigate = useNavigate();
   const { lang, t } = useSettingsStore();
+  const formUrl = import.meta.env.VITE_CONTACT_FORM_URL;
   const { profile, signOut, updateProfile } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState<'stats' | 'weakness'>('stats');
@@ -498,7 +498,30 @@ export function Profile() {
             {t.ui.backToTop}
           </button>
 
-          <div className="pt-4 flex justify-center">
+          <div className="pt-4 flex flex-col items-center gap-3">
+            <div className="flex items-center gap-4 text-xs text-text-secondary/60">
+              <Link to="/about" className="hover:text-text-primary transition-colors">
+                {t.ui.about}
+              </Link>
+              <span>|</span>
+              <Link to="/privacy" className="hover:text-text-primary transition-colors">
+                {t.ui.privacyPolicy}
+              </Link>
+              {formUrl && (
+                <>
+                  <span>|</span>
+                  <a
+                    href={formUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-text-primary transition-colors"
+                  >
+                    {t.ui.contact}
+                  </a>
+                </>
+              )}
+            </div>
+
             <button
               onClick={handleSignOut}
               className="px-4 py-2 rounded-lg text-text-secondary/60 hover:text-error hover:bg-error/10 cursor-pointer transition-all duration-200 text-xs font-medium"

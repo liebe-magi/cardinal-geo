@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -62,6 +62,17 @@ export function Login() {
         <h2 className="text-xl font-bold text-center mb-6 text-text-primary">
           {isSignUp ? t.ui.signUp : t.ui.signIn}
         </h2>
+
+        {/* Privacy Policy Note */}
+        <div className="text-center mb-4 text-xs text-text-secondary">
+          {t.ui.privacyAgreement}{' '}
+          <Link
+            to="/privacy"
+            className="text-primary hover:text-cyan-300 transition-colors underline"
+          >
+            {t.ui.privacyAgreementLink}
+          </Link>
+        </div>
 
         {/* OAuth buttons */}
         <div className="flex flex-col gap-2 mb-6">
