@@ -36,8 +36,8 @@ export function ResultMap({ cityA, cityB }: ResultMapProps) {
         maxBoundsViscosity: 1.0,
       }).setView([0, 0], 2);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
         noWrap: true,
       }).addTo(map);
 
