@@ -71,7 +71,7 @@ export async function settlePendingMatches(userId: string): Promise<number> {
   // 1. Fetch all pending matches with their question ratings
   const { data: pendingMatches, error: fetchError } = await supabase
     .from('match_history')
-    .select('id, user_rating_before, question_rating_before, question_id')
+    .select('id, mode, user_rating_before, question_rating_before, question_id')
     .eq('user_id', userId)
     .eq('status', 'pending');
 
