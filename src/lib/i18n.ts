@@ -154,6 +154,8 @@ export const translations = {
       privacyAgreement: 'ログインすることでプライバシーポリシーに同意したものとみなされます。',
       privacyAgreementLink: 'プライバシーポリシー',
       contact: 'お問い合わせ',
+      userId: 'ユーザーID',
+      copyId: 'コピー',
     },
     directions: {
       N: '北',
@@ -346,6 +348,8 @@ export const translations = {
       privacyAgreement: 'By signing in, you agree to our Privacy Policy.',
       privacyAgreementLink: 'Privacy Policy',
       contact: 'Contact',
+      userId: 'User ID',
+      copyId: 'Copy',
     },
     directions: {
       N: 'N',

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import L from 'leaflet';
 import { cities } from '../cities';
 import { fetchAllModeStats, fetchRatingRank, type ModeStats } from '../lib/supabaseApi';
 import { useAuthStore } from '../stores/authStore';
@@ -39,6 +40,7 @@ export function Profile() {
   const [newUsername, setNewUsername] = useState(profile?.username || '');
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
   const [rank, setRank] = useState<{ rank: number; total: number } | null>(null);
   const [stats, setStats] = useState<{
     survivalRated: ModeStats;
@@ -84,6 +86,13 @@ export function Profile() {
     await signOut();
     navigate('/');
   };
+
+  const handleCopyId = useCallback(async () => {
+    if (!profile?.id) return;
+    await navigator.clipboard.writeText(profile.id);
+    setIdCopied(true);
+    setTimeout(() => setIdCopied(false), 2000);
+  }, [profile?.id]);
 
   const buildShareText = useCallback(() => {
     if (!profile) return '';
@@ -247,6 +256,29 @@ export function Profile() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* User ID Display */}
+        <div className="mb-6">
+          <label className="text-text-secondary text-xs mb-1.5 block uppercase tracking-wider font-medium">
+            {(t.ui as any).userId || 'User ID'}
+          </label>
+          <div className="flex items-center justify-between bg-surface-light/40 border border-white/5 rounded-xl px-4 py-2.5">
+            <span className="text-text-primary text-sm font-mono opacity-80 select-all truncate mr-3">
+              {profile.id}
+            </span>
+            <button
+              onClick={handleCopyId}
+              disabled={idCopied}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all duration-200 text-xs font-medium ${
+                idCopied
+                  ? 'bg-success/10 text-success border-success/20'
+                  : 'bg-surface-light/60 text-text-primary border-white/8 hover:bg-surface-hover hover:border-primary/30 cursor-pointer'
+              }`}
+            >
+              {idCopied ? `✅ ${t.ui.copied}` : `📋 ${(t.ui as any).copyId || 'Copy'}`}
+            </button>
+          </div>
         </div>
 
         {/* Custom Dashboard Tabs */}
