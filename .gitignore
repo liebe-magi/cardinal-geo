@@ -19,6 +19,9 @@ supabase/seed_questions*.sql
 *.swp
 *.swo
 
+# Generated script output (contains user-specific data)
+scripts/*_output.sql
+
 # Environment variables
 .env
 .env.local

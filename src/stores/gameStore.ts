@@ -399,8 +399,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         },
       }));
 
-      // Refresh profile for UI display (non-critical for computation)
-      authState.fetchProfile();
+      // Refresh profile for UI display (non-critical for computation,
+      // but awaited so downstream UI reads see the latest data)
+      try {
+        await authState.fetchProfile();
+      } catch {
+        // Swallow errors: failure to refresh profile should not break gameplay
+        console.error('Failed to refresh profile after rated answer submission');
+      }
     }
 
     const newHistory = [...gameState.history, isCorrect];

@@ -16,18 +16,23 @@
  * Only records WITH complete opponent snapshots can be re-calculated.
  *
  * Usage:
- *   npx tsx scripts/fix_rating_chain.ts
+ *   USER_ID=<uuid> SUPABASE_URL=<url> SUPABASE_SERVICE_ROLE_KEY=<key> npx tsx scripts/fix_rating_chain.ts
  *
  * Prerequisites:
- *   SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars must be set.
+ *   USER_ID, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars must be set.
  */
 
 import { createClient } from '@supabase/supabase-js';
 import rate from 'glicko2-lite';
 
 // ── Config ────────────────────────────────────────────────────────────
-const USER_ID = 'e2a3fcaa-bfb7-41e2-84fa-b6f32b1d8b9b';
+const USER_ID = process.env.USER_ID;
 const TOLERANCE = 0.001; // floating-point comparison tolerance
+
+if (!USER_ID) {
+  console.error('Missing USER_ID env var (target user UUID)');
+  process.exit(1);
+}
 
 // ── Supabase client (service role for direct DB access) ──────────────
 
