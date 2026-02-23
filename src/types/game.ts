@@ -1,6 +1,7 @@
+import type { Region } from '../lib/regions';
 import type { City } from './city';
 
-export type GameMode = 'survival' | 'challenge' | 'learning';
+export type GameMode = 'survival' | 'challenge' | 'learning' | 'starter' | Region;
 export type GameSubMode = 'rated' | 'unrated';
 
 export type Direction = 'N' | 'S' | 'E' | 'W';

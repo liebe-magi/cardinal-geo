@@ -1,76 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Translations } from '../lib/i18n';
-import { fetchRatingHistory, type RatingHistoryPoint } from '../lib/supabaseApi';
+import {
+  fetchRatingHistory,
+  fetchRatingHistoryAggregated,
+  type RatingHistoryPoint,
+  type AggregatedCandle,
+} from '../lib/supabaseApi';
 import { useSettingsStore } from '../stores/settingsStore';
 
 type Period = 'day' | 'week' | 'month';
 type ChartType = 'candlestick' | 'line';
-
-interface Candle {
-  label: string;
-  open: number;
-  close: number;
-  high: number;
-  low: number;
-  count: number;
-}
-
-function getPeriodKey(timestamp: string, period: Period): string {
-  const d = new Date(timestamp);
-  if (period === 'day') {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-  if (period === 'week') {
-    const day = new Date(d);
-    day.setHours(0, 0, 0, 0);
-    day.setDate(day.getDate() - ((day.getDay() + 6) % 7));
-    return `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-  }
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function getPeriodLabel(key: string, period: Period): string {
-  if (period === 'month') {
-    const [y, m] = key.split('-');
-    return `${y}/${m}`;
-  }
-  const parts = key.split('-');
-  return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
-}
-
-function aggregateCandles(history: RatingHistoryPoint[], period: Period): Candle[] {
-  const map = new Map<string, { ratings: number[]; openRating: number; last: number }>();
-
-  for (const point of history) {
-    const key = getPeriodKey(point.timestamp, period);
-    const entry = map.get(key);
-    if (entry) {
-      entry.ratings.push(point.rating);
-      entry.last = point.rating;
-    } else {
-      map.set(key, {
-        ratings: [point.rating],
-        openRating: point.ratingBefore,
-        last: point.rating,
-      });
-    }
-  }
-
-  const candles: Candle[] = [];
-  for (const [key, entry] of map) {
-    const allValues = [entry.openRating, ...entry.ratings];
-    candles.push({
-      label: getPeriodLabel(key, period),
-      open: entry.openRating,
-      close: entry.last,
-      high: Math.max(...allValues),
-      low: Math.min(...allValues),
-      count: entry.ratings.length,
-    });
-  }
-
-  return candles;
-}
 
 interface RatingChartProps {
   userId: string;
@@ -80,6 +19,7 @@ interface RatingChartProps {
 export function RatingChart({ userId, currentRating }: RatingChartProps) {
   const { t } = useSettingsStore();
   const [history, setHistory] = useState<RatingHistoryPoint[]>([]);
+  const [candles, setCandles] = useState<AggregatedCandle[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartType, setChartType] = useState<ChartType>('candlestick');
   const [period, setPeriod] = useState<Period>('day');
@@ -87,11 +27,17 @@ export function RatingChart({ userId, currentRating }: RatingChartProps) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const data = await fetchRatingHistory(userId, 500);
-      setHistory(data);
+      if (chartType === 'candlestick') {
+        const data = await fetchRatingHistoryAggregated(userId, period);
+        setCandles(data);
+      } else {
+        // Line chart still needs individual points, but we can rely on a large limit like 1000
+        const data = await fetchRatingHistory(userId, 1000);
+        setHistory(data);
+      }
       setLoading(false);
     })();
-  }, [userId]);
+  }, [userId, chartType, period]);
 
   if (loading) {
     return (
@@ -101,7 +47,9 @@ export function RatingChart({ userId, currentRating }: RatingChartProps) {
     );
   }
 
-  if (history.length < 2) {
+  const hasData = chartType === 'candlestick' ? candles.length >= 1 : history.length >= 2;
+
+  if (!hasData) {
     return <div className="text-center py-8 text-text-secondary text-sm">{t.ui.noData}</div>;
   }
 
@@ -130,7 +78,7 @@ export function RatingChart({ userId, currentRating }: RatingChartProps) {
       </div>
 
       {chartType === 'candlestick' ? (
-        <CandlestickChart history={history} period={period} setPeriod={setPeriod} t={t} />
+        <CandlestickChart candles={candles} period={period} setPeriod={setPeriod} t={t} />
       ) : (
         <LineChart history={history} currentRating={currentRating} t={t} />
       )}
@@ -141,21 +89,19 @@ export function RatingChart({ userId, currentRating }: RatingChartProps) {
 // ─── Candlestick Chart ──────────────────────────────────────
 
 interface CandlestickChartProps {
-  history: RatingHistoryPoint[];
+  candles: AggregatedCandle[];
   period: Period;
   setPeriod: (p: Period) => void;
   t: Translations;
 }
 
-function CandlestickChart({ history, period, setPeriod, t }: CandlestickChartProps) {
+function CandlestickChart({ candles, period, setPeriod, t }: CandlestickChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<{
     x: number;
     y: number;
-    candle: Candle;
+    candle: AggregatedCandle;
   } | null>(null);
-
-  const candles = aggregateCandles(history, period);
 
   if (candles.length === 0) {
     return <div className="text-center py-8 text-text-secondary text-sm">{t.ui.noData}</div>;
@@ -366,7 +312,7 @@ function CandlestickChart({ history, period, setPeriod, t }: CandlestickChartPro
       )}
 
       <div className="text-center text-xs text-text-secondary mt-1">
-        {t.ui.matchCount}: {history.length}
+        {t.ui.matchCount}: {candles.reduce((sum, c) => sum + c.count, 0)}
       </div>
     </div>
   );

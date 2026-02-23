@@ -40,7 +40,11 @@ export function FinalResult() {
   })();
   const isNewHighScore = category && gameState.score >= prevHighScore && gameState.score > 0;
 
-  const titleText = gameState.mode === 'survival' ? t.ui.gameOver : t.ui.challengeComplete;
+  const titleText =
+    gameState.mode === 'survival' ||
+    (gameState.mode !== 'challenge' && gameState.mode !== 'learning')
+      ? t.ui.gameOver
+      : t.ui.challengeComplete;
 
   // Cleanup accordion maps on unmount
   useEffect(() => {
@@ -97,8 +101,8 @@ export function FinalResult() {
             maxBoundsViscosity: 1.0,
           }).setView([0, 0], 2);
 
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
             noWrap: true,
           }).addTo(accMap);
 
@@ -138,9 +142,7 @@ export function FinalResult() {
 
   // Rating change display
   const totalRatingChange = gameState.totalRatingChange;
-  const isRatedGame =
-    gameState.subMode === 'rated' &&
-    (gameState.mode === 'survival' || gameState.mode === 'challenge');
+  const isRatedGame = gameState.mode !== 'learning';
   const ratingBefore = gameState.ratingBefore;
   const ratingAfter = ratingBefore !== undefined ? ratingBefore + totalRatingChange : undefined;
 
@@ -351,18 +353,36 @@ export function FinalResult() {
           </div>
         )}
 
+        {/* Guest CTA */}
+        {!isAuthenticated && (
+          <div className="mb-5 p-5 bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 rounded-xl text-center">
+            <h3 className="text-text-primary font-bold mb-2">もっと楽しむには？</h3>
+            <p className="text-text-secondary text-xs leading-relaxed mb-4">
+              アカウントを作成すると、全198カ国から出題されるレーティング戦に参加でき、毎日のプレイ記録やスコアを保存できます！
+            </p>
+            <button
+              onClick={() => navigate('/login')}
+              className="px-6 py-2.5 bg-primary text-bg font-bold rounded-lg hover:bg-cyan-400 transition-colors text-sm"
+            >
+              無料アカウント作成 / ログイン
+            </button>
+          </div>
+        )}
+
         {/* Action buttons */}
+        {gameState.mode !== 'challenge' && (
+          <button
+            onClick={async () => {
+              await startGame(gameState.mode, gameState.subMode);
+              navigate('/quiz', { replace: true });
+            }}
+            className="btn-glow w-full py-3.5 rounded-xl text-base mb-2"
+          >
+            {t.ui.retry}
+          </button>
+        )}
         <button
-          onClick={async () => {
-            await startGame(gameState.mode, gameState.subMode);
-            navigate('/quiz', { replace: true });
-          }}
-          className="btn-glow w-full py-3.5 rounded-xl text-base mb-2"
-        >
-          {t.ui.retry}
-        </button>
-        <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/play')}
           className="w-full py-2.5 rounded-xl bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200 text-sm font-medium"
         >
           {t.ui.backToTop}

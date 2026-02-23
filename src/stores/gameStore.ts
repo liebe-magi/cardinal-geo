@@ -9,15 +9,14 @@ import {
   fetchCityRatings,
   getDailyProgress,
   getOrCreateQuestion,
-  saveChallengeUnratedResult,
   saveDailyProgress,
   settlePendingMatches,
   submitRatedAnswer,
   updateBestSurvivalRatedScore,
-  updateBestSurvivalUnratedScore,
   updateWeaknessScoreDb,
   type DbQuestion,
 } from '../lib/supabaseApi';
+import type { City } from '../types/city';
 import type {
   GameMode,
   GameState,
@@ -27,19 +26,56 @@ import type {
   QuestionRecord,
 } from '../types/game';
 import { createInitialGameState } from '../types/game';
-import { useAuthStore } from './authStore';
+import { useAuthStore, type Profile } from './authStore';
+
+function getRatingModeFromGameMode(mode: GameMode): string {
+  if (mode === 'survival' || mode === 'challenge') return 'global';
+  if (mode === 'starter') return 'starter_rated';
+  if (mode === 'learning') return 'global';
+  return `${mode}_rated`;
+}
+
+function getProfileRatingForMode(profile: Profile, mode: GameMode): GlickoRating {
+  const ratingMode = getRatingModeFromGameMode(mode);
+  const modeRating = profile.modeRatings?.[ratingMode];
+  if (modeRating) {
+    return {
+      rating: modeRating.rating,
+      rd: modeRating.rd,
+      vol: modeRating.vol,
+    };
+  }
+  // Global tracks survival/challenge together. If global doesn't exist yet,
+  // fall back to legacy profile rating.
+  if (ratingMode === 'global') {
+    return {
+      rating: profile.rating,
+      rd: profile.rd,
+      vol: profile.vol,
+    };
+  }
+  // Starter/region modes should start independently from default values.
+  return {
+    rating: 1500,
+    rd: 350,
+    vol: 0.06,
+  };
+}
 
 interface GameStore {
   // State
   gameState: GameState;
   currentQuestion: Question | null;
-  userGuess: QuadDirection;
+  userGuess: QuadDirection | null;
   isShowingResult: boolean;
   lastAnswerResult: {
     isCorrect: boolean;
     isPartialCorrect: boolean;
     ratingChange?: number;
   } | null;
+
+  // Filtered dataset for Starter / Region
+  filteredCities: City[] | null;
 
   // Daily challenge
   dailyQuestions: Question[];
@@ -56,6 +92,7 @@ interface GameStore {
   setUserGuess: (guess: QuadDirection) => void;
   submitAnswer: () => Promise<void>;
   endGame: () => Promise<void>;
+  reviewDailyResult: () => Promise<boolean>;
   reset: () => void;
 
   // Helpers
@@ -68,9 +105,10 @@ type HighScoreCategory = 'survival_rated' | 'survival_unrated';
 export const useGameStore = create<GameStore>((set, get) => ({
   gameState: createInitialGameState('survival', 'unrated'),
   currentQuestion: null,
-  userGuess: { ns: 'N', ew: 'E' },
+  userGuess: null,
   isShowingResult: false,
   lastAnswerResult: null,
+  filteredCities: null,
   dailyQuestions: [],
   dailyDateStr: '',
   currentDbQuestion: null,
@@ -78,21 +116,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
   pendingSettledCount: 0,
 
   isRatedMode: (): boolean => {
-    const { mode, subMode } = get().gameState;
-    return subMode === 'rated' && (mode === 'survival' || mode === 'challenge');
+    const { mode } = get().gameState;
+    // All modes are rated except learning
+    return mode !== 'learning';
   },
 
   getHighScoreCategory: (): HighScoreCategory | null => {
-    const { mode, subMode } = get().gameState;
-    if (mode === 'survival' && subMode === 'rated') return 'survival_rated';
-    if (mode === 'survival' && subMode === 'unrated') return 'survival_unrated';
-    return null; // learning, challenge — tracked differently
+    const { mode } = get().gameState;
+    if (mode === 'survival') return 'survival_rated';
+    return null; // other modes tracked differently
   },
 
   startGame: async (mode: GameMode, subMode: GameSubMode) => {
     const gameState = createInitialGameState(mode, subMode);
     const authState = useAuthStore.getState();
-    const isRated = subMode === 'rated' && (mode === 'survival' || mode === 'challenge');
+    // All modes are rated except learning
+    const isRated = mode !== 'learning';
 
     // Generate session ID for rated modes
     if (isRated && authState.isAuthenticated) {
@@ -109,8 +148,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Record rating at the start of the session
       const latestProfile = useAuthStore.getState().profile;
       if (latestProfile) {
-        gameState.ratingBefore = latestProfile.rating;
+        const startRating = getProfileRatingForMode(latestProfile, mode);
+        gameState.ratingBefore = startRating.rating;
       }
+    }
+
+    // Handle Starter mode fetching
+    let filteredCities: City[] | null = null;
+    if (mode === 'starter') {
+      const { FAMOUS_CITY_CODES } = await import('../lib/famousCities');
+      const { cities } = await import('../cities');
+      filteredCities = cities.filter((c) => FAMOUS_CITY_CODES.includes(c.countryCode));
+    } else if (mode !== 'survival' && mode !== 'challenge' && mode !== 'learning') {
+      // It's a region
+      const { cities } = await import('../cities');
+      const { countryRegionMap } = await import('../lib/regions');
+      filteredCities = cities.filter((c) => countryRegionMap[c.countryCode] === mode);
     }
 
     // For daily challenge, pre-generate all 10 questions and check for resume
@@ -145,12 +198,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       gameState,
       currentQuestion: null,
-      userGuess: {
-        ns: Math.random() > 0.5 ? 'N' : 'S',
-        ew: Math.random() > 0.5 ? 'E' : 'W',
-      },
+      userGuess: null,
       isShowingResult: false,
       lastAnswerResult: null,
+      filteredCities,
       dailyQuestions,
       dailyDateStr,
       currentDbQuestion: null,
@@ -177,7 +228,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const weaknessScores = authState.profile?.weakness_scores || {};
       question = generateLearningQuestion(weaknessScores);
     } else {
-      question = generateQuestion();
+      question = generateQuestion(get().filteredCities || undefined);
     }
 
     // For rated modes: get/create question in DB and create pending match
@@ -190,17 +241,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       dbQuestion = await getOrCreateQuestion(question);
 
       if (dbQuestion && gameState.sessionId) {
-        const mode =
+        // Build mode string for match_history
+        const modeStr =
           gameState.mode === 'survival'
-            ? ('survival_rated' as const)
-            : ('challenge_rated' as const);
+            ? 'survival_rated'
+            : gameState.mode === 'challenge'
+              ? 'challenge_rated'
+              : gameState.mode === 'starter'
+                ? 'starter_rated'
+                : `${gameState.mode}_rated`;
 
         const matchId = await createPendingMatch(
           authState.user!.id,
           dbQuestion.id,
           gameState.sessionId,
-          mode,
-          authState.profile.rating,
+          modeStr,
+          getProfileRatingForMode(authState.profile, gameState.mode).rating,
           dbQuestion.rating,
         );
 
@@ -220,10 +276,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       currentQuestion: question,
       currentDbQuestion: dbQuestion,
-      userGuess: {
-        ns: Math.random() > 0.5 ? 'N' : 'S',
-        ew: Math.random() > 0.5 ? 'E' : 'W',
-      },
+      userGuess: null,
       isShowingResult: false,
       lastAnswerResult: null,
     });
@@ -235,7 +288,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   submitAnswer: async () => {
     const { currentQuestion, userGuess, gameState, currentDbQuestion } = get();
-    if (!currentQuestion) return;
+    if (!currentQuestion || !userGuess) return;
 
     set({ isProcessing: true });
 
@@ -264,11 +317,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentDbQuestion &&
       gameState.currentMatchHistoryId
     ) {
-      const playerRating: GlickoRating = {
-        rating: authState.profile.rating,
-        rd: authState.profile.rd,
-        vol: authState.profile.vol,
-      };
+      const playerRating: GlickoRating = getProfileRatingForMode(authState.profile, gameState.mode);
       const pairRating: GlickoRating = {
         rating: currentDbQuestion.rating,
         rd: currentDbQuestion.rd,
@@ -370,28 +419,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     }
 
-    // Update best score for survival modes in DB
+    // Update best score for survival mode in DB
     const category = get().getHighScoreCategory();
     if (category && authState.isAuthenticated && authState.user) {
       const profile = authState.profile;
-      const currentBest =
-        category === 'survival_rated'
-          ? (profile?.best_score_survival_rated ?? 0)
-          : (profile?.best_score_survival_unrated ?? 0);
+      const currentBest = profile?.best_score_survival_rated ?? 0;
       if (newScore > currentBest) {
-        if (category === 'survival_rated') {
-          updateBestSurvivalRatedScore(authState.user.id, newScore);
-        } else {
-          updateBestSurvivalUnratedScore(authState.user.id, newScore);
-        }
+        updateBestSurvivalRatedScore(authState.user.id, newScore);
         // Update local profile state immediately
         if (profile) {
-          const key =
-            category === 'survival_rated'
-              ? 'best_score_survival_rated'
-              : 'best_score_survival_unrated';
           useAuthStore.setState({
-            profile: { ...profile, [key]: newScore },
+            profile: { ...profile, best_score_survival_rated: newScore },
           });
         }
       }
@@ -441,31 +479,95 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   endGame: async () => {
-    const { gameState } = get();
-    const authState = useAuthStore.getState();
-
-    // Save challenge unrated result to DB
-    if (
-      gameState.mode === 'challenge' &&
-      gameState.subMode === 'unrated' &&
-      authState.isAuthenticated &&
-      authState.user
-    ) {
-      await saveChallengeUnratedResult(authState.user.id, gameState.score);
-    }
-
     set((state) => ({
       gameState: { ...state.gameState, isGameOver: true },
     }));
   },
 
-  reset: () => {
+  reviewDailyResult: async () => {
+    const authState = useAuthStore.getState();
+    if (!authState.isAuthenticated) return false;
+
+    set({ isProcessing: true });
+
+    // Attempt to load today's progress
+    const dateStr = getUTCDateString();
+    const progress = await getDailyProgress(dateStr);
+
+    if (!progress || progress.status !== 'completed' || !progress.answers) {
+      set({ isProcessing: false });
+      return false;
+    }
+
+    // Dynamically import cities to reconstruct the history
+    const { cities } = await import('../cities');
+
+    // We recreate the state necessary for FinalResult to display
+    const reconstructedHistory: boolean[] = [];
+    const reconstructedQuestionHistory: GameState['questionHistory'] = [];
+
+    for (const item of progress.answers) {
+      const ans = item as Record<string, unknown>;
+      const cityA = cities.find((c) => c.countryCode === ans.cityACode);
+      const cityB = cities.find((c) => c.countryCode === ans.cityBCode);
+
+      if (!cityA || !cityB) {
+        console.error('Invalid daily progress data: city code not found', {
+          cityACode: ans.cityACode,
+          cityBCode: ans.cityBCode,
+        });
+        set({ isProcessing: false });
+        return false;
+      }
+
+      const isCorrect = Boolean(ans.isCorrect);
+      reconstructedHistory.push(isCorrect);
+      reconstructedQuestionHistory.push({
+        isCorrect: ans.isCorrect as boolean,
+        isPartialCorrect: ans.isPartialCorrect as boolean | undefined,
+        ratingChange: ans.ratingChange as number | undefined,
+        userAnswer: ans.userAnswer as QuadDirection,
+        correctDirection: ans.correctDirection as QuadDirection,
+        cityA,
+        cityB,
+      });
+    }
+
     set({
-      gameState: createInitialGameState('survival', 'unrated'),
+      gameState: {
+        mode: 'challenge',
+        subMode: 'rated',
+        score: progress.score,
+        questionCount: progress.current_question,
+        history: reconstructedHistory,
+        questionHistory: reconstructedQuestionHistory,
+        isGameOver: true,
+        sessionId: '', // Not needed for review
+        totalRatingChange: progress.total_rating_change,
+      },
       currentQuestion: null,
-      userGuess: { ns: 'N', ew: 'E' },
+      userGuess: null,
       isShowingResult: false,
       lastAnswerResult: null,
+      filteredCities: null,
+      dailyQuestions: generateDailyChallengeQuestions(dateStr),
+      dailyDateStr: dateStr,
+      currentDbQuestion: null,
+      isProcessing: false,
+      pendingSettledCount: 0,
+    });
+
+    return true;
+  },
+
+  reset: () => {
+    set({
+      gameState: createInitialGameState('survival', 'rated'),
+      currentQuestion: null,
+      userGuess: null,
+      isShowingResult: false,
+      lastAnswerResult: null,
+      filteredCities: null,
       dailyQuestions: [],
       dailyDateStr: '',
       currentDbQuestion: null,

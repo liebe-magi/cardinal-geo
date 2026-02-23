@@ -2,7 +2,7 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import type { QuadDirection } from '../../types/game';
 
 interface CompassGridProps {
-  userGuess: QuadDirection;
+  userGuess: QuadDirection | null;
   onSelect: (guess: QuadDirection) => void;
   cityAName: string;
   cityBName: string;
@@ -20,7 +20,7 @@ export function CompassGrid({ userGuess, onSelect, cityAName, cityBName }: Compa
 
   // Determine which quadrant the target card should appear in
   const selectedPos =
-    userGuess.ns && userGuess.ew
+    userGuess?.ns && userGuess?.ew
       ? `pos-${userGuess.ns.toLowerCase()}${userGuess.ew.toLowerCase()}`
       : null;
 
@@ -34,7 +34,7 @@ export function CompassGrid({ userGuess, onSelect, cityAName, cityBName }: Compa
 
       {/* Quadrant buttons */}
       {quadrants.map(({ ns, ew, pos }) => {
-        const isSelected = userGuess.ns === ns && userGuess.ew === ew;
+        const isSelected = userGuess?.ns === ns && userGuess?.ew === ew;
         return (
           <button
             key={pos}
@@ -44,12 +44,22 @@ export function CompassGrid({ userGuess, onSelect, cityAName, cityBName }: Compa
         );
       })}
 
-      {/* Target city card — shown in the selected quadrant */}
-      {selectedPos && (
+      {/* Target city card — shown in the selected quadrant, or all quadrants if none elected */}
+      {selectedPos ? (
         <div className={`city-card target ${selectedPos}`}>
           <span className="city-role">Target</span>
           <span className="city-name">{cityAName}</span>
         </div>
+      ) : (
+        quadrants.map(({ pos }) => (
+          <div
+            key={pos}
+            className={`city-card target ${pos} opacity-40 pointer-events-none transition-opacity duration-300`}
+          >
+            <span className="city-role">Target</span>
+            <span className="city-name">{cityAName}</span>
+          </div>
+        ))
       )}
 
       {/* Origin city card — always at center */}

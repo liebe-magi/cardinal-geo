@@ -3,16 +3,17 @@ import type { City } from '../types/city';
 import type { QuadDirection, Question } from '../types/game';
 import type { Lang } from './i18n';
 
-export function getRandomCity(): City {
-  return cities[Math.floor(Math.random() * cities.length)];
+export function getRandomCity(filteredCities?: City[]): City {
+  const pool = filteredCities && filteredCities.length > 0 ? filteredCities : cities;
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export function generateQuestion(): Question {
-  const cityA = getRandomCity();
-  let cityB = getRandomCity();
+export function generateQuestion(filteredCities?: City[]): Question {
+  const cityA = getRandomCity(filteredCities);
+  let cityB = getRandomCity(filteredCities);
 
   while (cityA.countryCode === cityB.countryCode && cityA.nameEn === cityB.nameEn) {
-    cityB = getRandomCity();
+    cityB = getRandomCity(filteredCities);
   }
 
   return {

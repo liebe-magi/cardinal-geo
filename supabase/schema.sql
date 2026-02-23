@@ -17,6 +17,24 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+-- =============================================================
+-- 1b. user_mode_ratings テーブル (モードごとのレーティング)
+-- =============================================================
+create table if not exists public.user_mode_ratings (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  mode text not null,
+  rating double precision not null default 1500,
+  rd double precision not null default 350,
+  vol double precision not null default 0.06,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, mode)
+);
+
+drop trigger if exists user_mode_ratings_updated_at on public.user_mode_ratings;
+create trigger user_mode_ratings_updated_at
+  before update on public.user_mode_ratings
+  for each row execute function public.update_updated_at();
+
 -- auth.users 作成時に自動でプロフィール行を作る
 create or replace function public.handle_new_user()
 returns trigger as $$
@@ -142,6 +160,22 @@ create policy "Users can update own profile"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
+-- user_mode_ratings
+alter table public.user_mode_ratings enable row level security;
+
+create policy "User mode ratings are viewable by everyone"
+  on public.user_mode_ratings for select
+  using (true);
+
+create policy "Users can insert own mode ratings"
+  on public.user_mode_ratings for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update own mode ratings"
+  on public.user_mode_ratings for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 -- questions
 alter table public.questions enable row level security;
 
@@ -241,20 +275,21 @@ end;
 $$ language plpgsql security definer;
 
 -- 7b2. Rating Ranking (with play count from match_history)
-create or replace function public.get_rating_ranking()
+create or replace function public.get_rating_ranking(p_mode text default 'survival_rated')
 returns table(id uuid, username text, rating double precision, play_count bigint) as $$
 begin
   return query
     select
       p.id,
       p.username,
-      p.rating,
+      umr.rating,
       count(mh.id) as play_count
     from public.profiles p
+    join public.user_mode_ratings umr on umr.user_id = p.id and umr.mode = p_mode
     left join public.match_history mh
-      on mh.user_id = p.id and mh.status != 'pending'
-    group by p.id, p.username, p.rating
-    order by p.rating desc
+      on mh.user_id = p.id and mh.status != 'pending' and mh.mode = p_mode
+    group by p.id, p.username, umr.rating
+    order by umr.rating desc
     limit 100;
 end;
 $$ language plpgsql security definer;
@@ -309,6 +344,7 @@ create or replace function public.submit_rated_answer(
 returns void as $$
 declare
   match_rec public.match_history;
+  v_mode text;
 begin
   -- Verify ownership and pending status
   select * into match_rec
@@ -321,6 +357,8 @@ begin
     raise exception 'Match not found or already resolved';
   end if;
 
+  v_mode := match_rec.mode;
+
   -- Update match history
   update public.match_history
   set
@@ -331,13 +369,13 @@ begin
     answered_at = now()
   where id = p_match_history_id;
 
-  -- Update user rating
-  update public.profiles
-  set
-    rating = p_new_user_rating,
-    rd = p_new_user_rd,
-    vol = p_new_user_vol
-  where id = auth.uid();
+  -- Update user rating in user_mode_ratings
+  insert into public.user_mode_ratings (user_id, mode, rating, rd, vol)
+  values (auth.uid(), v_mode, p_new_user_rating, p_new_user_rd, p_new_user_vol)
+  on conflict (user_id, mode) do update set
+    rating = excluded.rating,
+    rd = excluded.rd,
+    vol = excluded.vol;
 
   -- Update question rating and stats
   update public.questions
@@ -350,7 +388,7 @@ begin
   where id = match_rec.question_id;
 
   -- Update best survival score if applicable
-  if match_rec.mode = 'survival_rated' then
+  if v_mode = 'survival_rated' then
     update public.profiles
     set best_score_survival_rated = greatest(
       best_score_survival_rated,

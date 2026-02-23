@@ -71,7 +71,7 @@ export async function settlePendingMatches(userId: string): Promise<number> {
   // 1. Fetch all pending matches with their question ratings
   const { data: pendingMatches, error: fetchError } = await supabase
     .from('match_history')
-    .select('id, user_rating_before, question_rating_before, question_id')
+    .select('id, mode, user_rating_before, question_rating_before, question_id')
     .eq('user_id', userId)
     .eq('status', 'pending');
 
@@ -84,19 +84,40 @@ export async function settlePendingMatches(userId: string): Promise<number> {
 
   let settledCount = 0;
 
-  // 2. Get current user profile for rating
+  // Legacy fallback for users who may not yet have a global mode row.
   const { data: profileData } = await supabase
     .from('profiles')
     .select('rating, rd, vol')
     .eq('id', userId)
     .single();
 
-  let currentPlayerRating: GlickoRating = profileData
-    ? { rating: profileData.rating, rd: profileData.rd, vol: profileData.vol }
-    : { rating: 1500, rd: 350, vol: 0.06 };
+  // 2. Get current user mode ratings
+  const { data: modeRatingsData } = await supabase
+    .from('user_mode_ratings')
+    .select('mode, rating, rd, vol')
+    .eq('user_id', userId);
+
+  const modeRatings: Record<string, GlickoRating> = {};
+  if (modeRatingsData) {
+    for (const row of modeRatingsData) {
+      modeRatings[row.mode] = { rating: row.rating, rd: row.rd, vol: row.vol };
+    }
+  }
 
   // 3. Process each pending match sequentially (order matters for rating)
   for (const match of pendingMatches) {
+    const mode = match.mode;
+    const ratingMode = mode === 'survival_rated' || mode === 'challenge_rated' ? 'global' : mode;
+    const currentPlayerRating: GlickoRating =
+      modeRatings[ratingMode] ||
+      (ratingMode === 'global' && profileData
+        ? { rating: profileData.rating, rd: profileData.rd, vol: profileData.vol }
+        : {
+            rating: 1500,
+            rd: 350,
+            vol: 0.06,
+          });
+
     // Fetch current question rating
     const { data: questionData } = await supabase
       .from('questions')
@@ -126,8 +147,8 @@ export async function settlePendingMatches(userId: string): Promise<number> {
 
     if (success) {
       settledCount++;
-      // Update running player rating for next pending match
-      currentPlayerRating = result.player;
+      // Update running player rating for next pending match in the same mode
+      modeRatings[ratingMode] = result.player;
     }
   }
 
@@ -223,7 +244,7 @@ export async function createPendingMatch(
   userId: string,
   questionId: string,
   sessionId: string,
-  mode: 'survival_rated' | 'challenge_rated',
+  mode: string,
   userRatingBefore: number,
   questionRatingBefore: number,
 ): Promise<number | null> {
@@ -375,43 +396,66 @@ export async function fetchAllModeStats(userId: string): Promise<{
   survivalUnrated: ModeStats;
   challengeDaily: ModeStats;
   challengeUnrated: ModeStats;
+  highestRating: number;
+  totalRatedMatches: number;
 } | null> {
   if (!supabase) return null;
 
   // Fetch all data in parallel
-  const [profileRes, survivalRatedRes, survivalUnratedRes, dailyRes, unratedRes] =
-    await Promise.all([
-      // Profile for best scores
-      supabase
-        .from('profiles')
-        .select('best_score_survival_rated, best_score_survival_unrated')
-        .eq('id', userId)
-        .single(),
-      // Survival rated: count matches with mode='survival_rated'
-      supabase
-        .from('match_history')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('mode', 'survival_rated')
-        .neq('status', 'pending'),
-      // Survival unrated: need a different approach — survival unrated doesn't go through match_history
-      // We'll count from match_history with mode check, but survival_unrated doesn't use match_history
-      // Actually check what modes exist
-      supabase
-        .from('match_history')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('mode', 'survival_unrated')
-        .neq('status', 'pending'),
-      // Daily challenge results
-      supabase
-        .from('daily_challenge_results')
-        .select('score')
-        .eq('user_id', userId)
-        .eq('status', 'completed'),
-      // Challenge unrated results
-      supabase.from('challenge_unrated_results').select('score').eq('user_id', userId),
-    ]);
+  const [
+    profileRes,
+    survivalRatedRes,
+    survivalUnratedRes,
+    dailyRes,
+    unratedRes,
+    highestRatingRes,
+    totalRatedMatchesRes,
+  ] = await Promise.all([
+    // Profile for best scores and falling back to current rating
+    supabase
+      .from('profiles')
+      .select('best_score_survival_rated, best_score_survival_unrated, rating')
+      .eq('id', userId)
+      .single(),
+    // Survival rated: count matches with mode='survival_rated'
+    supabase
+      .from('match_history')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('mode', 'survival_rated')
+      .neq('status', 'pending'),
+    // Survival unrated: need a different approach — survival unrated doesn't go through match_history
+    // We'll count from match_history with mode check, but survival_unrated doesn't use match_history
+    // Actually check what modes exist
+    supabase
+      .from('match_history')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('mode', 'survival_unrated')
+      .neq('status', 'pending'),
+    // Daily challenge results
+    supabase
+      .from('daily_challenge_results')
+      .select('score')
+      .eq('user_id', userId)
+      .eq('status', 'completed'),
+    // Challenge unrated results
+    supabase.from('challenge_unrated_results').select('score').eq('user_id', userId),
+    // Highest rating found in match history
+    supabase
+      .from('match_history')
+      .select('user_rating_after')
+      .eq('user_id', userId)
+      .order('user_rating_after', { ascending: false })
+      .limit(1),
+    // Total rated matches count
+    supabase
+      .from('match_history')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .neq('status', 'pending')
+      .not('user_rating_after', 'is', null),
+  ]);
 
   if (profileRes.error) return null;
 
@@ -429,6 +473,12 @@ export async function fetchAllModeStats(userId: string): Promise<{
   const unratedCount = unratedScores.length;
   const unratedAvg = unratedCount > 0 ? unratedScores.reduce((a, b) => a + b, 0) / unratedCount : 0;
   const unratedBest = unratedCount > 0 ? Math.max(...unratedScores) : 0;
+
+  // Calculate highest rating (from history or current profile rating if history doesn't exceed it)
+  const currentRating = profileRes.data?.rating ?? 1500;
+  const historyHighest = highestRatingRes?.data?.[0]?.user_rating_after;
+  const highestRating =
+    historyHighest !== undefined ? Math.max(currentRating, historyHighest) : currentRating;
 
   return {
     survivalRated: {
@@ -451,6 +501,8 @@ export async function fetchAllModeStats(userId: string): Promise<{
       avg: Math.round(unratedAvg * 10) / 10,
       count: unratedCount,
     },
+    highestRating,
+    totalRatedMatches: totalRatedMatchesRes.count ?? 0,
   };
 }
 
@@ -533,6 +585,22 @@ export async function fetchWeaknessScores(userId: string): Promise<Record<string
   }
 
   return (data?.weakness_scores as Record<string, number>) || {};
+}
+
+export async function fetchFamousCities(): Promise<string[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from('city_ratings')
+    .select('country_code')
+    .order('rating', { ascending: true })
+    .limit(30);
+
+  if (error) {
+    console.error('Error fetching famous cities:', error);
+    return [];
+  }
+  return data.map((row) => row.country_code);
 }
 
 // ============================================================
@@ -620,7 +688,7 @@ export async function updateWeaknessScoreDb(
   }
 
   const scores: Record<string, number> = (data?.weakness_scores as Record<string, number>) || {};
-  const delta = isCorrect ? -2 : 1;
+  const delta = isCorrect ? -1 : 1;
   scores[countryCodeA] = (scores[countryCodeA] || 0) + delta;
   scores[countryCodeB] = (scores[countryCodeB] || 0) + delta;
 
@@ -721,6 +789,15 @@ export interface RatingHistoryPoint {
   timestamp: string;
 }
 
+export interface AggregatedCandle {
+  label: string;
+  open: number;
+  close: number;
+  high: number;
+  low: number;
+  count: number;
+}
+
 /**
  * Fetch the user's rating history from match_history.
  * Returns rating after each resolved match, ordered chronologically.
@@ -753,39 +830,100 @@ export async function fetchRatingHistory(
   }));
 }
 
+/**
+ * Fetch the user's rating history aggregated by period (day, week, month).
+ */
+export async function fetchRatingHistoryAggregated(
+  userId: string,
+  period: 'day' | 'week' | 'month',
+): Promise<AggregatedCandle[]> {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase.rpc('get_rating_history_aggregated', {
+    p_user_id: userId,
+    p_period: period,
+  });
+
+  if (error) {
+    console.error('Error fetching aggregated history:', error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => ({
+    label: row.period_label,
+    open: Number(row.open),
+    close: Number(row.close),
+    high: Number(row.high),
+    low: Number(row.low),
+    count: Number(row.match_count),
+  }));
+}
+
 // ============================================================
 // Question Direction Helpers
 // ============================================================
 
 /**
- * Fetch the user's rating rank (1-based position among all users).
+ * Fetch the user's rating rank (1-based position among all users) for a specific mode.
  * Returns { rank, total } or null on error.
  */
 export async function fetchRatingRank(
   userId: string,
+  mode: string = 'global',
 ): Promise<{ rank: number; total: number } | null> {
   if (!supabase) return null;
 
-  // First, get the user's own rating
+  // First, get the user's own rating for the mode
   const { data: userData, error: errUser } = await supabase
-    .from('profiles')
+    .from('user_mode_ratings')
     .select('rating')
-    .eq('id', userId)
+    .eq('user_id', userId)
+    .eq('mode', mode)
     .single();
 
   if (errUser || !userData) {
-    console.error('Error fetching user rating:', errUser);
-    return null;
+    // If no rating exists for this mode, assume default 1500
+    const userRating = 1500;
+
+    // Count users with strictly higher rating
+    const { count: higherCount, error: err1 } = await supabase
+      .from('user_mode_ratings')
+      .select('*', { count: 'exact', head: true })
+      .eq('mode', mode)
+      .gt('rating', userRating)
+      .neq('user_id', userId);
+
+    if (err1) {
+      console.error('Error fetching higher count:', err1);
+      return null;
+    }
+
+    // Count total users with a rating in this mode
+    const { count: totalCount, error: err2 } = await supabase
+      .from('user_mode_ratings')
+      .select('*', { count: 'exact', head: true })
+      .eq('mode', mode);
+
+    if (err2) {
+      console.error('Error fetching total count:', err2);
+      return null;
+    }
+
+    return {
+      rank: (higherCount ?? 0) + 1,
+      total: totalCount ?? 0,
+    };
   }
 
   const userRating = userData.rating as number;
 
   // Count users with strictly higher rating (exclude self to avoid float precision issues)
   const { count: higherCount, error: err1 } = await supabase
-    .from('profiles')
+    .from('user_mode_ratings')
     .select('*', { count: 'exact', head: true })
+    .eq('mode', mode)
     .gt('rating', userRating)
-    .neq('id', userId);
+    .neq('user_id', userId);
 
   if (err1) {
     console.error('Error fetching rating rank:', err1);
@@ -794,8 +932,9 @@ export async function fetchRatingRank(
 
   // Count total users
   const { count: totalCount, error: err2 } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true });
+    .from('user_mode_ratings')
+    .select('*', { count: 'exact', head: true })
+    .eq('mode', mode);
 
   if (err2) {
     console.error('Error fetching total users:', err2);

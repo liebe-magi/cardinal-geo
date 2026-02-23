@@ -3,24 +3,21 @@
 A web application to practice relative city locations (North, South, East, West) inspired by the board game "Nantettatte Honolulu".
 ボードゲーム「なんてったってホノルル」にインスパイアされた、2都市の相対的な位置（東西南北）を練習するWebアプリです。
 
-## Features / 機能
+## Features
 
-- **Three Game Modes / 3つのゲームモード**
-  - **Survival Mode / サバイバルモード**: Continue answering until you make a mistake. / 間違えるまで回答し続けるエンドレスモード。
-  - **Time Attack Mode / タイムアタックモード**: Answer as many questions as possible in 60 seconds. / 60秒間の制限時間内にできるだけ多く正解するモード。
-  - **10 Questions Challenge / 10問チャレンジ**: Accuracy challenge for 10 questions. / 10問中何問正解できるかを競うモード。
+- **Five Game Modes**
+  - **Survival Mode (Rated)**: Continue answering until you make a mistake.
+  - **Daily Challenge (Rated)**: 10 daily questions exactly the same for all players. Compete for the highest daily score.
+  - **Starter Mode (Rated)**: Practice with well-known world capitals to build a solid foundation.
+  - **Regional Mode (Rated)**: Focus training on specific regions like Europe, Asia, Africa, etc.
+  - **Learning Mode (Practice)**: Review mode that prioritizes your weak spots.
 
-- **Bilingual Support / バイリンガル対応**
-  - Switch between Japanese and English. / 日本語と英語の切り替えが可能。
+- **Statistics & Dashboards**
+  - **Global Ranking**: View leaderboards for Rating, Survival, and Daily Challenge modes.
+  - **Global Stats**: Deep dive into game metadata, including a City Difficulty chart.
+  - **My Data**: Personal dashboard tracking rating history, top scores, and weakness maps.
 
-- **Interactive Map Feedback / インタラクティブな地図フィードバック**
-  - View correct locations on a map after each answer (except Time Attack). / 各回答後に地図上で正しい位置を確認できます（タイムアタック除く）。
-
-- **Final Result Screen / 最終結果画面**
-  - Score, accuracy, and answer history displayed at the end of each game. / ゲーム終了後にスコア・正答率・回答履歴を表示。
-
-- **Direction Logic / 方角判定**
-  - Simple latitude/longitude numeric comparison (does not wrap across the 180th meridian). / 緯度・経度の数値の大小で判定（東経180度をまたがない）。
+- **Interactive Map Feedback & Bilingual Support**
 
 ## Setup / セットアップ
 

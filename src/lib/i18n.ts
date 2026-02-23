@@ -5,23 +5,25 @@ export const translations = {
     appTitle: 'Cardinal Geo',
     modes: {
       survival: 'サバイバル',
-      challenge: 'チャレンジ',
+      challenge: 'デイリーチャレンジ',
       learning: '学習',
+      starter: '有名首都',
+      region: 'エリア限定',
     },
     modeDesc: {
-      survival: '失敗するまで続くエンドレスモード',
+      survival:
+        '間違えるまでひたすら回答し続けるサバイバル形式。全198カ国の位置関係を直感に刻み込もう',
       survival_rated: 'レーティングに影響',
       survival_unrated: '気軽に練習',
-      challenge: '10問の方角クイズに挑戦',
+      challenge: '1日1回限定！全プレイヤー共通の10問に挑戦して、今日のスコアを競い合おう',
       challenge_daily: '日替わりチャレンジ',
       challenge_unrated: 'ランダム10問で腕試し',
-      learning: '苦手な問題を優先的に出題',
+      learning: '間違えた問題を優先して出題する復習用モード（レーティング変動なし）',
+      starter: '初心者におすすめ！世界を代表する50の主要な首都だけで基礎を固める入門モード',
+      region: '特定の地域に絞って集中トレーニング！近隣の国々との詳細な位置関係をマスターしよう',
     },
     subModes: {
-      rated: 'Rated',
-      unrated: 'Unrated',
-      daily: 'Rated',
-      tenQs: 'Unrated',
+      play: 'プレイ',
     },
     ui: {
       flipNS: '南北反転',
@@ -58,6 +60,7 @@ export const translations = {
       weaknessList: 'リスト',
       weaknessReset: '苦手度リセット',
       weaknessResetConfirm: '苦手度データをリセットしますか？',
+      globalStats: '全体統計',
       noData: 'データなし',
       country: '国名',
       capital: '首都',
@@ -82,7 +85,7 @@ export const translations = {
       rated: 'Rated',
       unrated: 'Unrated',
       // Daily
-      todaysChallenge: '日替わりチャレンジ',
+      todaysChallenge: 'デイリーチャレンジ',
       alreadyPlayed: '本日はプレイ済みです',
       alreadyPlayedToday: '本日はプレイ済みです',
       shareResult: '結果をシェア',
@@ -91,9 +94,10 @@ export const translations = {
       dailyResetTime: 'UTC 00:00 ({tz} {time}) にリセット',
       // Ranking tabs
       rankingRating: 'レーティング',
-      rankingSurvivalRated: 'サバイバル (Rated)',
+      rankingSurvivalRated: '連続正解数',
       rankingSurvivalUnrated: 'サバイバル (Unrated)',
-      rankingDailyChallenge: '日替わりチャレンジ',
+      rankingDailyChallenge: 'デイリーチャレンジ',
+      rankingDailyAvg: 'デイリー平均',
       rankingChallengeUnrated: 'チャレンジ (Unrated)',
       rankingCityDifficulty: '都市難易度',
       cityDifficultyHard: '🔥 難しい順',
@@ -135,9 +139,23 @@ export const translations = {
       statsChallengeUnrated: 'Challenge (Unrated)',
       shareProfile: '戦績をシェア',
       copied: 'コピーしました！',
+      // Global Stats
+      totalQuestionsAnswered: '総回答数',
+      totalPlayers: '総プレイヤー数',
+      globalAccuracy: '平均正答率',
+      profilePlayCount: 'レーティング対戦数',
+      profileStats: '成績',
+      highestRating: '最高レート',
       setupUsername: 'ユーザー名を設定',
       setupUsernameDesc: 'ランキングやプロフィールに表示されます',
       skip: 'スキップ',
+      privacyPolicy: 'プライバシーポリシー',
+      about: 'このアプリについて',
+      privacyAgreement: 'ログインすることでプライバシーポリシーに同意したものとみなされます。',
+      privacyAgreementLink: 'プライバシーポリシー',
+      contact: 'お問い合わせ',
+      userId: 'ユーザーID',
+      copyId: 'コピー',
     },
     directions: {
       N: '北',
@@ -145,28 +163,61 @@ export const translations = {
       E: '東',
       W: '西',
     },
+    landing: {
+      heroTitleLine1: 'あなたの「地理力」を',
+      heroTitleLine2: '世界で試そう',
+      heroDesc:
+        '「Cardinal Geo」は、2つの都市の相対的な方角を当てる、シンプルで奥深い地理クイズゲームです。知識を磨いてレーティングを上げ、グローバルランキングの頂点を目指しましょう！',
+      feature1Title: '有名首都から挑戦',
+      feature1Desc:
+        'まずは世界を代表する有名な都市からスタート。アカウント登録なしでもすぐにお試しプレイが可能です。',
+      feature2Title: 'レーティング戦',
+      feature2Desc:
+        'アカウントを作成すると、全198カ国から出題される本格的な「Rated」モードに参加可能。オンラインチェスや競技ゲームでも採用されている本格的なレーティングシステム（Glicko-2）を導入しています。',
+      feature3Title: '地域別の特訓も可能',
+      feature3Desc:
+        '「ヨーロッパだけ」「東南アジアだけ」など、自分の得意な地域・苦手な地域に絞って出題範囲をカスタマイズできます。',
+      tryOutTitle: 'まずは試してみる',
+      tryOutDesc:
+        '世界の主要な首都の中から出題される「有名首都モード」を、登録なしで今すぐ体験できます。',
+      tryOutBtn: 'お試しプレイ（有名首都モード）',
+      howToPlayTitle: '遊び方',
+      howToPlayDesc: 'ルールは直感的でシンプル。2つの都市の位置関係を当てるだけです。',
+      step1Title: 'お題を確認',
+      step1Desc: '「ターゲット都市」と「基準の都市」の名前が表示されます。',
+      step2Title: '位置を予想',
+      step2Desc:
+        'ターゲット都市が、基準の都市から見て【北西・北東・南西・南東】のどの方向にあるかを選びます。',
+      step3Title: '正解を目指せ',
+      step3Desc: '見事正解してスコアを伸ばし、世界の都市の位置関係をマスターしましょう！',
+    },
   },
   en: {
     appTitle: 'Cardinal Geo',
     modes: {
       survival: 'Survival',
-      challenge: 'Challenge',
+      challenge: 'Daily Challenge',
       learning: 'Learning',
+      starter: 'Starter',
+      region: 'Regional',
     },
     modeDesc: {
-      survival: 'Endless mode until you miss',
-      survival_rated: 'Affects your rating',
+      survival:
+        'Survival format: keep answering until you make a mistake. Ingrain the locations of all 198 countries into your intuition.',
+      survival_rated: 'Affects rating',
       survival_unrated: 'Casual practice',
-      challenge: '10-question direction quiz',
+      challenge:
+        'A once-a-day test of skill! Compete with everyone on the exact same 10 questions for the highest score.',
       challenge_daily: 'Daily challenge',
       challenge_unrated: 'Random 10 questions practice',
-      learning: 'Focus on your weak spots',
+      learning: 'Review mode that prioritizes your weak spots. (Practice mode, Unrated)',
+      starter:
+        'Highly recommended for beginners! Build a solid foundation with about 50 well-known world capitals.',
+      region:
+        'Focus your training on a specific region! Master the detailed layout of neighboring countries.',
     },
     subModes: {
-      rated: 'Rated',
-      unrated: 'Unrated',
-      daily: 'Rated',
-      tenQs: 'Unrated',
+      play: 'Play',
     },
     ui: {
       flipNS: 'Flip N/S',
@@ -236,9 +287,10 @@ export const translations = {
       dailyResetTime: 'Resets at UTC 00:00 ({tz} {time})',
       // Ranking tabs
       rankingRating: 'Rating',
-      rankingSurvivalRated: 'Survival (Rated)',
+      rankingSurvivalRated: 'Win Streak',
       rankingSurvivalUnrated: 'Survival (Unrated)',
       rankingDailyChallenge: 'Daily Challenge',
+      rankingDailyAvg: 'Daily Average',
       rankingChallengeUnrated: 'Challenge (Unrated)',
       rankingCityDifficulty: 'City Difficulty',
       cityDifficultyHard: '🔥 Hardest',
@@ -280,15 +332,60 @@ export const translations = {
       statsChallengeUnrated: 'Challenge (Unrated)',
       shareProfile: 'Share Stats',
       copied: 'Copied!',
+      // Global Stats
+      globalStats: 'Global Stats',
+      totalQuestionsAnswered: 'Total Questions Answered',
+      totalPlayers: 'Total Players',
+      globalAccuracy: 'Global Accuracy',
+      profilePlayCount: 'Rating Matches',
+      profileStats: 'Stats',
+      highestRating: 'Highest Rating',
       setupUsername: 'Set Your Username',
       setupUsernameDesc: 'This will be shown in rankings and your profile',
       skip: 'Skip',
+      privacyPolicy: 'Privacy Policy',
+      about: 'About',
+      privacyAgreement: 'By signing in, you agree to our Privacy Policy.',
+      privacyAgreementLink: 'Privacy Policy',
+      contact: 'Contact',
+      userId: 'User ID',
+      copyId: 'Copy',
     },
     directions: {
       N: 'N',
       S: 'S',
       E: 'E',
       W: 'W',
+    },
+    landing: {
+      heroTitleLine1: 'Test your "Geo-Skills"',
+      heroTitleLine2: 'against the World',
+      heroDesc:
+        '"Cardinal Geo" is a simple yet deep geography quiz game where you guess the relative direction between two cities. Hone your knowledge, raise your rating, and aim for the top of the global rankings!',
+      feature1Title: 'Start with Famous Capitals',
+      feature1Desc:
+        'Begin with cities everyone knows. You can try it out immediately without registering an account.',
+      feature2Title: 'Rated Matches',
+      feature2Desc:
+        'Create an account to join the serious "Rated" mode featuring all 198 countries, utilizing an authentic rating system (Glicko-2) widely adopted in online chess and modern competitive games!',
+      feature3Title: 'Regional Training',
+      feature3Desc:
+        'Customize your question range to focus on your strongest or weakest regions, like "Only Europe" or "Only Southeast Asia".',
+      tryOutTitle: 'Try it right now',
+      tryOutDesc:
+        'Experience the "Starter Mode" immediately without registration, featuring the most well-known world capitals.',
+      tryOutBtn: 'Try it out (Famous Capitals Mode)',
+      howToPlayTitle: 'How To Play',
+      howToPlayDesc:
+        'The rules are intuitive and simple. Just guess the relative direction between two cities.',
+      step1Title: 'Check the Question',
+      step1Desc: 'The names of the "Target City" and the "Origin City" will be displayed.',
+      step2Title: 'Guess the Direction',
+      step2Desc:
+        'Choose which direction (NW, NE, SW, or SE) the Target City is located relative to the Origin City.',
+      step3Title: 'Aim for the exact direction',
+      step3Desc:
+        'Guess the exact direction to increase your score and master the geographical relationships of cities around the world!',
     },
   },
 };

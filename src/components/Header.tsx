@@ -7,6 +7,8 @@ export function Header() {
   const { isAuthenticated, profile } = useAuthStore();
   const navigate = useNavigate();
 
+  const displayRating = profile?.modeRatings?.global?.rating ?? profile?.rating ?? 1500;
+
   return (
     <header className="flex justify-between items-center mb-6 py-3 px-4 -mx-4 sm:-mx-6 lg:-mx-8 rounded-b-2xl bg-surface/60 backdrop-blur-md border-b border-white/5">
       <Link to="/" className="flex items-center gap-2.5 no-underline group">
@@ -28,7 +30,7 @@ export function Header() {
               {profile.username || t.ui.profile}
             </span>
             <span className="text-accent font-bold text-[11px] bg-accent-dim px-1.5 py-0.5 rounded-full">
-              {Math.round(profile.rating)}
+              G {Math.round(displayRating)}
             </span>
           </button>
         )}

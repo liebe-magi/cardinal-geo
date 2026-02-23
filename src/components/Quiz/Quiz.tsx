@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDirection } from '../../lib/quiz';
 import { useGameStore } from '../../stores/gameStore';
@@ -20,6 +21,16 @@ export function Quiz() {
   } = useGameStore();
 
   // Redirect if no question or showing result
+  useEffect(() => {
+    if (isShowingResult || gameState.isGameOver) {
+      if (gameState.isGameOver) {
+        navigate('/result/final', { replace: true });
+      } else {
+        navigate('/result', { replace: true });
+      }
+    }
+  }, [isShowingResult, gameState.isGameOver, navigate]);
+
   if (!currentQuestion) {
     return (
       <>
@@ -32,12 +43,6 @@ export function Quiz() {
   }
 
   if (isShowingResult || gameState.isGameOver) {
-    // Navigate to result page
-    if (gameState.isGameOver) {
-      navigate('/result/final', { replace: true });
-    } else {
-      navigate('/result', { replace: true });
-    }
     return null;
   }
 
@@ -81,11 +86,11 @@ export function Quiz() {
 
         {/* Direction display */}
         <div className="direction-display">
-          {formatDirection(userGuess, lang)} {t.ui.direction}
+          {userGuess ? `${formatDirection(userGuess, lang)} ${t.ui.direction}` : '\u00A0'}
         </div>
 
         {/* Submit button */}
-        <button onClick={handleSubmit} disabled={isProcessing} className="submit-btn">
+        <button onClick={handleSubmit} disabled={isProcessing || !userGuess} className="submit-btn">
           {isProcessing ? t.ui.loading : t.ui.submit}
         </button>
       </div>

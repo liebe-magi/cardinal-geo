@@ -5,16 +5,44 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#00bcd4" />
-    <meta name="description" content="首都の方角当てクイズアプリ" />
+    <meta
+      name="description"
+      content="Cardinal Geo（カーディナル・ジオ）は、知識と直感で世界の都市の方角や位置を当てる全く新しい地理探索型クイズアプリです。ゲーム感覚で世界地図を体感しよう。"
+    />
     <link rel="apple-touch-icon" href="/pwa-192x192.png" />
-    <title>Cardinal Geo</title>
+    <title>Cardinal Geo | 世界の都市を巡る、新感覚の地理探索ゲーム</title>
+
+    <!-- OGP & Twitter Cards -->
+    <meta property="og:title" content="Cardinal Geo | 世界の都市を巡る、新感覚の地理探索ゲーム" />
+    <meta
+      property="og:description"
+      content="Cardinal Geo（カーディナル・ジオ）は、知識と直感で世界の都市の方角や位置を当てる全く新しい地理探索型クイズアプリです。ゲーム感覚で世界地図を体感しよう。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
+    <meta property="og:image" content="%VITE_SITE_URL%/ogp-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="%VITE_SITE_URL%/" />
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""
     />
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=%VITE_GA_ID%"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag('js', new Date());
+
+      gtag('config', '%VITE_GA_ID%');
+    </script>
   </head>
+
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.tsx"></script>

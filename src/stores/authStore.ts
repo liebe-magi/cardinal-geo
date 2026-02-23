@@ -10,6 +10,7 @@ export interface Profile {
   rating: number;
   rd: number;
   vol: number;
+  modeRatings: Record<string, { rating: number; rd: number; vol: number }>;
   best_score_survival_rated: number;
   best_score_survival_unrated: number;
   weakness_scores: Record<string, number>;
@@ -152,7 +153,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
-    const profile = data as Profile;
+    const { data: modeRatingsData, error: modeRatingsError } = await supabase
+      .from('user_mode_ratings')
+      .select('mode, rating, rd, vol')
+      .eq('user_id', user.id);
+
+    if (modeRatingsError) {
+      console.error('Error fetching mode ratings:', modeRatingsError);
+    }
+
+    const modeRatings: Record<string, { rating: number; rd: number; vol: number }> = {};
+    if (modeRatingsData) {
+      for (const row of modeRatingsData) {
+        modeRatings[row.mode] = { rating: row.rating, rd: row.rd, vol: row.vol };
+      }
+    }
+
+    const profile = { ...data, modeRatings } as Profile;
     set({ profile });
 
     // One-time data migration: move LocalStorage game data to Supabase
@@ -161,15 +178,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const migrated = await migrateLocalDataToDb(user.id, localData);
       if (migrated) {
         clearLocalGameData();
-        // Re-fetch profile to get merged data
-        const { data: refreshed } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        if (refreshed) {
-          set({ profile: refreshed as Profile });
-        }
+        // Re-fetch profile (including mode ratings) to get merged data
+        await get().fetchProfile();
+        return;
       }
     }
   },

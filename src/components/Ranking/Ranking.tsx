@@ -1,18 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { cities } from '../../cities';
+
+import { regionLabels } from '../../lib/regions';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { Header } from '../Header';
 
-type RankingTab =
-  | 'rating'
-  | 'survival_rated'
-  | 'survival_unrated'
-  | 'daily'
-  | 'challenge_unrated'
-  | 'city_difficulty';
+type RankingTab = 'rating' | 'survival_rated' | 'daily' | 'daily_avg';
 
 interface RankingEntry {
   id: string;
@@ -26,10 +21,10 @@ export function Ranking() {
   const { t, lang } = useSettingsStore();
   const { profile } = useAuthStore();
   const [activeTab, setActiveTab] = useState<RankingTab>('rating');
+  const [ratingMode, setRatingMode] = useState<string>('global');
   const [entries, setEntries] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [dailyDate, setDailyDate] = useState(new Date().toISOString().slice(0, 10));
-  const [citySortAsc, setCitySortAsc] = useState(false);
 
   const fetchRanking = useCallback(async () => {
     if (!supabase) {
@@ -43,7 +38,9 @@ export function Ranking() {
 
       switch (activeTab) {
         case 'rating': {
-          const { data: results } = await supabase.rpc('get_rating_ranking');
+          const { data: results } = await supabase.rpc('get_rating_ranking', {
+            p_mode: ratingMode,
+          });
           data =
             results?.map(
               (r: { id: string; username: string; rating: number; play_count: number }) => ({
@@ -70,21 +67,7 @@ export function Ranking() {
             })) || [];
           break;
         }
-        case 'survival_unrated': {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, username, best_score_survival_unrated')
-            .order('best_score_survival_unrated', { ascending: false })
-            .gt('best_score_survival_unrated', 0)
-            .limit(100);
-          data =
-            profiles?.map((p) => ({
-              id: p.id,
-              username: p.username || '???',
-              value: p.best_score_survival_unrated,
-            })) || [];
-          break;
-        }
+
         case 'daily': {
           const { data: results } = await supabase
             .from('daily_challenge_results')
@@ -101,38 +84,18 @@ export function Ranking() {
             })) || [];
           break;
         }
-        case 'challenge_unrated': {
-          const { data: results } = await supabase.rpc('get_challenge_unrated_ranking');
+
+        case 'daily_avg': {
+          const { data: results } = await supabase.rpc('get_daily_average_ranking');
           data =
             results?.map(
-              (r: { id: string; username: string; avg_score: number; play_count: number }) => ({
+              (r: { id: string; username: string; rating: number; play_count: number }) => ({
                 id: r.id,
                 username: r.username || '???',
-                value: Number(r.avg_score),
-                extra: `${r.play_count} plays`,
+                value: r.rating,
+                extra: String(r.play_count),
               }),
             ) || [];
-          break;
-        }
-        case 'city_difficulty': {
-          const { data: results } = await supabase
-            .from('city_ratings')
-            .select('country_code, rating, play_count')
-            .order('rating', { ascending: citySortAsc })
-            .limit(198);
-          data =
-            results?.map((r: { country_code: string; rating: number; play_count: number }) => {
-              const city = cities.find((c) => c.countryCode === r.country_code);
-              return {
-                id: r.country_code,
-                username:
-                  lang === 'ja'
-                    ? `${city?.capitalJp || '?'} (${city?.nameJp || r.country_code})`
-                    : `${city?.capitalEn || '?'} (${city?.nameEn || r.country_code})`,
-                value: Math.round(r.rating),
-                extra: String(r.play_count),
-              };
-            }) || [];
           break;
         }
       }
@@ -144,7 +107,7 @@ export function Ranking() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, dailyDate, citySortAsc, lang]);
+  }, [activeTab, ratingMode, dailyDate, lang]);
 
   useEffect(() => {
     fetchRanking();
@@ -152,11 +115,19 @@ export function Ranking() {
 
   const tabs: { key: RankingTab; label: string }[] = [
     { key: 'rating', label: t.ui.rankingRating },
-    { key: 'survival_rated', label: t.ui.rankingSurvivalRated },
-    { key: 'survival_unrated', label: t.ui.rankingSurvivalUnrated },
-    { key: 'daily', label: t.ui.rankingDailyChallenge },
-    { key: 'challenge_unrated', label: t.ui.rankingChallengeUnrated },
-    { key: 'city_difficulty', label: t.ui.rankingCityDifficulty },
+    { key: 'survival_rated', label: t.ui.rankingSurvivalRated || '連続正解数' },
+    { key: 'daily', label: t.ui.rankingDailyChallenge || 'デイリーチャレンジ' },
+    { key: 'daily_avg', label: t.ui.rankingDailyAvg || 'デイリー平均' },
+  ];
+
+  const ratingModes = [
+    { key: 'global', label: 'Global' },
+    { key: 'starter_rated', label: t.modes.starter },
+    { key: 'asia_rated', label: regionLabels.asia[lang] },
+    { key: 'europe_rated', label: regionLabels.europe[lang] },
+    { key: 'africa_rated', label: regionLabels.africa[lang] },
+    { key: 'americas_rated', label: regionLabels.americas[lang] },
+    { key: 'oceania_rated', label: regionLabels.oceania[lang] },
   ];
 
   const changeDay = (delta: number) => {
@@ -170,7 +141,7 @@ export function Ranking() {
   return (
     <>
       <Header />
-      <div className="glass-card p-5 sm:p-8 animate-fade-in">
+      <div className="glass-card mb-8 p-5 sm:p-8 animate-fade-in">
         <h2 className="text-xl font-bold text-center mb-5 text-text-primary">👑 {t.ui.ranking}</h2>
 
         {/* Tabs */}
@@ -189,6 +160,25 @@ export function Ranking() {
             </button>
           ))}
         </div>
+
+        {/* Rating Mode Selector */}
+        {activeTab === 'rating' && (
+          <div className="flex flex-wrap gap-1.5 mb-5">
+            {ratingModes.map((mode) => (
+              <button
+                key={mode.key}
+                onClick={() => setRatingMode(mode.key)}
+                className={`px-2 py-1 rounded-md text-[10px] font-medium cursor-pointer transition-all duration-200 border ${
+                  ratingMode === mode.key
+                    ? 'bg-accent/15 text-accent border-accent/25'
+                    : 'bg-surface-light/20 text-text-secondary border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover'
+                }`}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Daily date picker */}
         {activeTab === 'daily' && (
@@ -215,32 +205,6 @@ export function Ranking() {
           </div>
         )}
 
-        {/* City difficulty sort toggle */}
-        {activeTab === 'city_difficulty' && (
-          <div className="flex items-center justify-center gap-2 mb-5">
-            <button
-              onClick={() => setCitySortAsc(false)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 border ${
-                !citySortAsc
-                  ? 'bg-primary/15 text-primary border-primary/25'
-                  : 'bg-surface-light/40 text-text-secondary border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover'
-              }`}
-            >
-              {t.ui.cityDifficultyHard}
-            </button>
-            <button
-              onClick={() => setCitySortAsc(true)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-200 border ${
-                citySortAsc
-                  ? 'bg-primary/15 text-primary border-primary/25'
-                  : 'bg-surface-light/40 text-text-secondary border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover'
-              }`}
-            >
-              {t.ui.cityDifficultyEasy}
-            </button>
-          </div>
-        )}
-
         {/* Table */}
         {loading ? (
           <div className="text-center text-text-secondary py-12">
@@ -254,21 +218,17 @@ export function Ranking() {
           <div className="max-h-[28rem] overflow-y-auto rounded-xl border border-white/5">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-text-secondary border-b border-white/8 bg-surface-light/30 sticky top-0">
+                <tr className="text-text-secondary border-b border-white/8 bg-surface/95 backdrop-blur-sm sticky top-0 z-10">
                   <th className="text-left py-2.5 px-3 font-semibold w-12">#</th>
-                  <th className="text-left py-2.5 px-3 font-semibold">
-                    {activeTab === 'city_difficulty' ? t.ui.capital : t.ui.username}
-                  </th>
+                  <th className="text-left py-2.5 px-3 font-semibold">{t.ui.username}</th>
                   <th className="text-right py-2.5 px-3 font-semibold">
-                    {activeTab === 'challenge_unrated'
-                      ? t.ui.avgScore
-                      : activeTab === 'rating' || activeTab === 'city_difficulty'
-                        ? t.ui.rating
+                    {activeTab === 'rating' || activeTab === 'survival_rated'
+                      ? t.ui.score || t.ui.rating
+                      : activeTab === 'daily_avg'
+                        ? t.ui.avgScore || '平均スコア'
                         : t.ui.score}
                   </th>
-                  {(activeTab === 'rating' ||
-                    activeTab === 'challenge_unrated' ||
-                    activeTab === 'city_difficulty') && (
+                  {(activeTab === 'rating' || activeTab === 'daily_avg') && (
                     <th className="text-right py-2.5 px-3 font-semibold">{t.ui.playCount}</th>
                   )}
                 </tr>
@@ -279,7 +239,7 @@ export function Ranking() {
                   return (
                     <tr
                       key={entry.id}
-                      className={`border-b border-white/5 transition-colors ${activeTab !== 'city_difficulty' && isMe ? 'bg-primary/8' : 'hover:bg-surface-light/20'}`}
+                      className={`border-b border-white/5 transition-colors ${isMe ? 'bg-primary/8' : 'hover:bg-surface-light/20'}`}
                     >
                       <td className="py-2 px-3 text-text-secondary font-bold">{i + 1}</td>
                       <td
@@ -288,11 +248,9 @@ export function Ranking() {
                         {entry.username}
                       </td>
                       <td className="py-2 px-3 text-right font-bold text-text-primary">
-                        {activeTab === 'challenge_unrated' ? entry.value.toFixed(2) : entry.value}
+                        {entry.value}
                       </td>
-                      {(activeTab === 'rating' ||
-                        activeTab === 'challenge_unrated' ||
-                        activeTab === 'city_difficulty') && (
+                      {(activeTab === 'rating' || activeTab === 'daily_avg') && (
                         <td className="py-2 px-3 text-right text-text-secondary text-xs">
                           {entry.extra}
                         </td>

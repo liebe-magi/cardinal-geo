@@ -1,5 +1,8 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCoord, formatDirection } from '../lib/quiz';
+import { regionLabels } from '../lib/regions';
+import { useAuthStore } from '../stores/authStore';
 import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { Header } from './Header';
@@ -8,10 +11,16 @@ import { ResultMap } from './ResultMap';
 export function QuestionResult() {
   const navigate = useNavigate();
   const { lang, t } = useSettingsStore();
+  const { profile, isAuthenticated } = useAuthStore();
   const { gameState, currentQuestion, lastAnswerResult, nextQuestion, endGame } = useGameStore();
 
+  useEffect(() => {
+    if (!currentQuestion || !lastAnswerResult) {
+      navigate('/', { replace: true });
+    }
+  }, [currentQuestion, lastAnswerResult, navigate]);
+
   if (!currentQuestion || !lastAnswerResult) {
-    navigate('/', { replace: true });
     return null;
   }
 
@@ -43,9 +52,42 @@ export function QuestionResult() {
   const wikiA = `https://${lang}.wikipedia.org/wiki/${cityAName}`;
   const wikiB = `https://${lang}.wikipedia.org/wiki/${cityBName}`;
 
+  const ratingMode =
+    gameState.mode === 'survival' || gameState.mode === 'challenge'
+      ? 'global'
+      : gameState.mode === 'starter'
+        ? 'starter_rated'
+        : `${gameState.mode}_rated`;
+  const ratingModeLabel =
+    ratingMode === 'global'
+      ? 'Global'
+      : ratingMode === 'starter_rated'
+        ? t.modes.starter
+        : ratingMode === 'asia_rated'
+          ? regionLabels.asia[lang]
+          : ratingMode === 'europe_rated'
+            ? regionLabels.europe[lang]
+            : ratingMode === 'africa_rated'
+              ? regionLabels.africa[lang]
+              : ratingMode === 'americas_rated'
+                ? regionLabels.americas[lang]
+                : ratingMode === 'oceania_rated'
+                  ? regionLabels.oceania[lang]
+                  : 'Mode';
+  const currentModeRating =
+    ratingMode === 'global'
+      ? Math.round(profile?.modeRatings?.global?.rating ?? profile?.rating ?? 1500)
+      : Math.round(profile?.modeRatings?.[ratingMode]?.rating ?? 1500);
+  const showModeRating =
+    gameState.subMode === 'rated' && gameState.mode !== 'learning' && isAuthenticated;
+
   const handleNext = async () => {
+    // Determine if the current mode is a "survival-style" endless mode
+    // (Everything except challenge and learning)
+    const isEndlessMode = gameState.mode !== 'challenge' && gameState.mode !== 'learning';
+
     if (
-      gameState.mode === 'survival' &&
+      isEndlessMode &&
       gameState.history.length > 0 &&
       !gameState.history[gameState.history.length - 1]
     ) {
@@ -96,6 +138,16 @@ export function QuestionResult() {
             <span className="text-xl font-bold text-text-primary">{gameState.score}</span>
           </div>
         </div>
+
+        {/* Current mode rating */}
+        {showModeRating && (
+          <div className="flex justify-center mb-5">
+            <div className="bg-surface-light/60 border border-white/5 px-5 py-2.5 rounded-full">
+              <span className="text-text-secondary text-sm mr-2">🏅 {ratingModeLabel}</span>
+              <span className="text-xl font-bold text-text-primary">{currentModeRating}</span>
+            </div>
+          </div>
+        )}
 
         {/* Direction comparison — side by side on wider screens */}
         <div className="grid grid-cols-2 gap-3 mb-5">
@@ -171,7 +223,7 @@ export function QuestionResult() {
         {/* Action buttons */}
         <div className="flex gap-3">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/play')}
             className="flex-1 py-3.5 rounded-xl bg-surface-light/50 text-text-primary border border-white/5 hover:border-text-secondary/30 hover:bg-surface-hover cursor-pointer transition-all duration-200 text-sm font-medium"
           >
             {t.ui.backToTop}
