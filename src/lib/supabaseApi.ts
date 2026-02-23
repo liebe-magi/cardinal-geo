@@ -84,6 +84,13 @@ export async function settlePendingMatches(userId: string): Promise<number> {
 
   let settledCount = 0;
 
+  // Legacy fallback for users who may not yet have a global mode row.
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('rating, rd, vol')
+    .eq('id', userId)
+    .single();
+
   // 2. Get current user mode ratings
   const { data: modeRatingsData } = await supabase
     .from('user_mode_ratings')
@@ -101,11 +108,15 @@ export async function settlePendingMatches(userId: string): Promise<number> {
   for (const match of pendingMatches) {
     const mode = match.mode;
     const ratingMode = mode === 'survival_rated' || mode === 'challenge_rated' ? 'global' : mode;
-    const currentPlayerRating: GlickoRating = modeRatings[ratingMode] || {
-      rating: 1500,
-      rd: 350,
-      vol: 0.06,
-    };
+    const currentPlayerRating: GlickoRating =
+      modeRatings[ratingMode] ||
+      (ratingMode === 'global' && profileData
+        ? { rating: profileData.rating, rd: profileData.rd, vol: profileData.vol }
+        : {
+            rating: 1500,
+            rd: 350,
+            vol: 0.06,
+          });
 
     // Fetch current question rating
     const { data: questionData } = await supabase

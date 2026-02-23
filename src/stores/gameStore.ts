@@ -504,20 +504,34 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // We recreate the state necessary for FinalResult to display
     const reconstructedHistory: boolean[] = [];
-    const reconstructedQuestionHistory = progress.answers.map((item: unknown) => {
-      const ans = item as Record<string, unknown>;
-      reconstructedHistory.push(ans.isCorrect as boolean);
+    const reconstructedQuestionHistory: GameState['questionHistory'] = [];
 
-      return {
+    for (const item of progress.answers) {
+      const ans = item as Record<string, unknown>;
+      const cityA = cities.find((c) => c.countryCode === ans.cityACode);
+      const cityB = cities.find((c) => c.countryCode === ans.cityBCode);
+
+      if (!cityA || !cityB) {
+        console.error('Invalid daily progress data: city code not found', {
+          cityACode: ans.cityACode,
+          cityBCode: ans.cityBCode,
+        });
+        set({ isProcessing: false });
+        return false;
+      }
+
+      const isCorrect = Boolean(ans.isCorrect);
+      reconstructedHistory.push(isCorrect);
+      reconstructedQuestionHistory.push({
         isCorrect: ans.isCorrect as boolean,
         isPartialCorrect: ans.isPartialCorrect as boolean | undefined,
         ratingChange: ans.ratingChange as number | undefined,
         userAnswer: ans.userAnswer as QuadDirection,
         correctDirection: ans.correctDirection as QuadDirection,
-        cityA: cities.find((c) => c.countryCode === ans.cityACode)!,
-        cityB: cities.find((c) => c.countryCode === ans.cityBCode)!,
-      };
-    });
+        cityA,
+        cityB,
+      });
+    }
 
     set({
       gameState: {
