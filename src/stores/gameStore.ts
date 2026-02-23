@@ -136,11 +136,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         await authState.fetchProfile();
       }
 
-      // Record rating at the start of the session
+      // Record rating at the start of the session and initialise local chain
       const latestProfile = useAuthStore.getState().profile;
       if (latestProfile) {
         const startRating = getProfileRatingForMode(latestProfile, mode);
         gameState.ratingBefore = startRating.rating;
+        gameState.currentPlayerRating = startRating;
       }
     }
 
@@ -242,16 +243,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
                 ? 'starter_rated'
                 : `${gameState.mode}_rated`;
 
-        const profileRating = getProfileRatingForMode(authState.profile, gameState.mode);
+        // Use locally-chained rating (immune to stale fetchProfile reads)
+        const localRating =
+          gameState.currentPlayerRating ??
+          getProfileRatingForMode(authState.profile, gameState.mode);
         const matchId = await createPendingMatch(
           authState.user!.id,
           dbQuestion.id,
           gameState.sessionId,
           modeStr,
-          profileRating.rating,
+          localRating.rating,
           dbQuestion.rating,
-          profileRating.rd,
-          profileRating.vol,
+          localRating.rd,
+          localRating.vol,
         );
 
         if (matchId) {
@@ -311,7 +315,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentDbQuestion &&
       gameState.currentMatchHistoryId
     ) {
-      const playerRating: GlickoRating = getProfileRatingForMode(authState.profile, gameState.mode);
+      // Use locally-chained rating to guarantee correct base for Glicko-2 calculation
+      const playerRating: GlickoRating =
+        gameState.currentPlayerRating ?? getProfileRatingForMode(authState.profile, gameState.mode);
       const pairRating: GlickoRating = {
         rating: currentDbQuestion.rating,
         rd: currentDbQuestion.rd,
@@ -384,8 +390,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         compositeOpponent, // snapshot opponent rating/rd/vol for replay
       );
 
-      // Refresh profile to get updated rating
-      await authState.fetchProfile();
+      // Chain the rating locally so the next question uses updated values
+      // (avoids dependency on fetchProfile which may return stale data)
+      set((state) => ({
+        gameState: {
+          ...state.gameState,
+          currentPlayerRating: result.player,
+        },
+      }));
+
+      // Refresh profile for UI display (non-critical for computation)
+      authState.fetchProfile();
     }
 
     const newHistory = [...gameState.history, isCorrect];

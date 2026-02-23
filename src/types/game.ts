@@ -1,3 +1,4 @@
+import type { GlickoRating } from '../lib/glicko2';
 import type { Region } from '../lib/regions';
 import type { City } from './city';
 
@@ -40,6 +41,8 @@ export interface GameState {
   totalRatingChange: number;
   /** User's rating at the start of this rated session */
   ratingBefore?: number;
+  /** Locally-chained player rating within the session (avoids stale fetchProfile reads) */
+  currentPlayerRating?: GlickoRating;
 }
 
 export function createInitialGameState(mode: GameMode, subMode: GameSubMode): GameState {
