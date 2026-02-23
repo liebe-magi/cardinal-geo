@@ -407,11 +407,12 @@ export async function fetchAllModeStats(userId: string): Promise<{
     unratedRes,
     highestRatingRes,
     totalRatedMatchesRes,
+    globalRatingRes,
   ] = await Promise.all([
-    // Profile for best scores and falling back to current rating
+    // Profile for best scores
     supabase
       .from('profiles')
-      .select('best_score_survival_rated, best_score_survival_unrated, rating')
+      .select('best_score_survival_rated, best_score_survival_unrated')
       .eq('id', userId)
       .single(),
     // Survival rated: count matches with mode='survival_rated'
@@ -455,6 +456,13 @@ export async function fetchAllModeStats(userId: string): Promise<{
       .eq('user_id', userId)
       .neq('status', 'pending')
       .not('user_rating_after', 'is', null),
+    // Current global rating from user_mode_ratings
+    supabase
+      .from('user_mode_ratings')
+      .select('rating')
+      .eq('user_id', userId)
+      .eq('mode', 'global')
+      .single(),
   ]);
 
   if (profileRes.error) return null;
@@ -474,8 +482,8 @@ export async function fetchAllModeStats(userId: string): Promise<{
   const unratedAvg = unratedCount > 0 ? unratedScores.reduce((a, b) => a + b, 0) / unratedCount : 0;
   const unratedBest = unratedCount > 0 ? Math.max(...unratedScores) : 0;
 
-  // Calculate highest rating (from history or current profile rating if history doesn't exceed it)
-  const currentRating = profileRes.data?.rating ?? 1500;
+  // Calculate highest rating (from history or current global rating if history doesn't exceed it)
+  const currentRating = globalRatingRes?.data?.rating ?? 1500;
   const historyHighest = highestRatingRes?.data?.[0]?.user_rating_after;
   const highestRating =
     historyHighest !== undefined ? Math.max(currentRating, historyHighest) : currentRating;
