@@ -11,11 +11,20 @@ interface SettingsState {
 
 export const useSettingsStore = create<SettingsState>((set) => {
   const storedLang = (localStorage.getItem(STORAGE_KEYS.LANG) as Lang) || 'ja';
+
+  // Initialize HTML lang attribute
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = storedLang;
+  }
+
   return {
     lang: storedLang,
     t: getTranslation(storedLang),
     setLang: (lang: Lang) => {
       localStorage.setItem(STORAGE_KEYS.LANG, lang);
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = lang;
+      }
       set({ lang, t: getTranslation(lang) });
     },
   };
