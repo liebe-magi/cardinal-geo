@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { About } from './components/About';
 import { FinalResult } from './components/FinalResult';
 import { GlobalStats } from './components/GlobalStats';
