@@ -3,8 +3,8 @@ import type { Translations } from '../lib/i18n';
 import {
   fetchRatingHistory,
   fetchRatingHistoryAggregated,
-  type RatingHistoryPoint,
   type AggregatedCandle,
+  type RatingHistoryPoint,
 } from '../lib/supabaseApi';
 import { useSettingsStore } from '../stores/settingsStore';
 
@@ -16,9 +16,29 @@ interface RatingChartProps {
   currentRating: number;
 }
 
+const MAX_HISTORY_FETCH = 5000;
+const MAX_LINE_POINTS = 1000;
+
+function downsampleHistory(history: RatingHistoryPoint[], maxPoints: number): RatingHistoryPoint[] {
+  if (history.length <= maxPoints) return history;
+  if (maxPoints <= 1) return [history[history.length - 1]];
+
+  const sampled: RatingHistoryPoint[] = [];
+  const lastIndex = history.length - 1;
+  const stepDenominator = maxPoints - 1;
+
+  for (let i = 0; i < maxPoints; i += 1) {
+    const index = Math.floor((i * lastIndex) / stepDenominator);
+    sampled.push(history[index]);
+  }
+
+  return sampled;
+}
+
 export function RatingChart({ userId, currentRating }: RatingChartProps) {
   const { t } = useSettingsStore();
   const [history, setHistory] = useState<RatingHistoryPoint[]>([]);
+  const [historyTotalCount, setHistoryTotalCount] = useState(0);
   const [candles, setCandles] = useState<AggregatedCandle[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartType, setChartType] = useState<ChartType>('candlestick');
@@ -31,9 +51,9 @@ export function RatingChart({ userId, currentRating }: RatingChartProps) {
         const data = await fetchRatingHistoryAggregated(userId, period);
         setCandles(data);
       } else {
-        // Line chart still needs individual points, but we can rely on a large limit like 1000
-        const data = await fetchRatingHistory(userId, 1000);
-        setHistory(data);
+        const data = await fetchRatingHistory(userId, MAX_HISTORY_FETCH);
+        setHistoryTotalCount(data.length);
+        setHistory(downsampleHistory(data, MAX_LINE_POINTS));
       }
       setLoading(false);
     })();
@@ -80,7 +100,12 @@ export function RatingChart({ userId, currentRating }: RatingChartProps) {
       {chartType === 'candlestick' ? (
         <CandlestickChart candles={candles} period={period} setPeriod={setPeriod} t={t} />
       ) : (
-        <LineChart history={history} currentRating={currentRating} t={t} />
+        <LineChart
+          history={history}
+          totalHistoryCount={historyTotalCount}
+          currentRating={currentRating}
+          t={t}
+        />
       )}
     </div>
   );
@@ -322,11 +347,12 @@ function CandlestickChart({ candles, period, setPeriod, t }: CandlestickChartPro
 
 interface LineChartProps {
   history: RatingHistoryPoint[];
+  totalHistoryCount: number;
   currentRating: number;
   t: Translations;
 }
 
-function LineChart({ history, currentRating, t }: LineChartProps) {
+function LineChart({ history, totalHistoryCount, currentRating, t }: LineChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<{
     x: number;
@@ -493,6 +519,7 @@ function LineChart({ history, currentRating, t }: LineChartProps) {
 
       <div className="text-center text-xs text-text-secondary mt-1">
         {t.ui.matchCount}: {history.length}
+        {totalHistoryCount > history.length ? ` / ${totalHistoryCount}` : ''}
       </div>
     </div>
   );

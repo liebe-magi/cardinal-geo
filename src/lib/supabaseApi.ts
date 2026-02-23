@@ -446,6 +446,9 @@ export async function fetchAllModeStats(userId: string): Promise<{
       .from('match_history')
       .select('user_rating_after')
       .eq('user_id', userId)
+      .in('mode', ['survival_rated', 'challenge_rated'])
+      .neq('status', 'pending')
+      .not('user_rating_after', 'is', null)
       .order('user_rating_after', { ascending: false })
       .limit(1),
     // Total rated matches count
@@ -808,26 +811,62 @@ export async function fetchRatingHistory(
 ): Promise<RatingHistoryPoint[]> {
   if (!supabase) return [];
 
-  const { data, error } = await supabase
-    .from('match_history')
-    .select('user_rating_before, user_rating_after, answered_at')
-    .eq('user_id', userId)
-    .neq('status', 'pending')
-    .not('user_rating_after', 'is', null)
-    .not('answered_at', 'is', null)
-    .order('answered_at', { ascending: true })
-    .limit(limit);
+  if (limit <= 0) return [];
 
-  if (error) {
-    console.error('Error fetching rating history:', error);
-    return [];
+  const pageSize = Math.min(1000, limit);
+  let from = 0;
+  const rows: Array<{
+    user_rating_before: number | null;
+    user_rating_after: number | null;
+    answered_at: string | null;
+  }> = [];
+
+  while (rows.length < limit) {
+    const to = Math.min(from + pageSize - 1, limit - 1);
+    const { data, error } = await supabase
+      .from('match_history')
+      .select('id, user_rating_before, user_rating_after, answered_at')
+      .eq('user_id', userId)
+      .in('mode', ['survival_rated', 'challenge_rated'])
+      .neq('status', 'pending')
+      .not('user_rating_after', 'is', null)
+      .not('answered_at', 'is', null)
+      .order('answered_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      console.error('Error fetching rating history:', error);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    rows.push(
+      ...data.map((row) => ({
+        user_rating_before: row.user_rating_before as number | null,
+        user_rating_after: row.user_rating_after as number | null,
+        answered_at: row.answered_at as string | null,
+      })),
+    );
+
+    if (data.length < pageSize) {
+      break;
+    }
+
+    from += pageSize;
   }
 
-  return (data || []).map((row) => ({
-    rating: row.user_rating_after as number,
-    ratingBefore: row.user_rating_before as number,
-    timestamp: row.answered_at as string,
-  }));
+  return rows
+    .slice(0, limit)
+    .reverse()
+    .map((row) => ({
+      rating: row.user_rating_after as number,
+      ratingBefore: row.user_rating_before as number,
+      timestamp: row.answered_at as string,
+    }));
 }
 
 /**
