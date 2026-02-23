@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import Sitemap from 'vite-plugin-sitemap';
 import { version } from './package.json';
 
 export default defineConfig({
@@ -72,6 +73,18 @@ export default defineConfig({
           },
         ],
       },
+    }),
+    Sitemap({
+      hostname: 'https://cardinalgeo.com',
+      dynamicRoutes: ['/about', '/privacy', '/login'],
+      generateRobotsTxt: true,
+      robots: [
+        {
+          userAgent: '*',
+          allow: '/',
+          disallow: ['/play', '/quiz', '/result', '/ranking', '/stats', '/profile', '/setup'],
+        },
+      ],
     }),
   ],
 });
