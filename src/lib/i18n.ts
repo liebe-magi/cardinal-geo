@@ -129,6 +129,7 @@ export const translations = {
       chartMatches: '対戦',
       chartCandlestick: 'ローソク足',
       chartLine: '折れ線',
+      cautionNote: '注意事項',
       ratingRank: '順位',
       statsBest: 'ベスト',
       statsAvg: '平均',
@@ -198,6 +199,10 @@ export const translations = {
         'ターゲット都市が、基準の都市から見て【北西・北東・南西・南東】のどの方向にあるかを選びます。',
       step3Title: '正解を目指せ',
       step3Desc: '見事正解してスコアを伸ばし、世界の都市の位置関係をマスターしましょう！',
+      step2Note:
+        '※ 方角は緯度・経度の数値の大小で判定します。地球儀上の最短距離ではなく、地図上の位置関係です。例えばワシントンDC（西経 約77°）は東京（東経 約140°）よりも「西」として判定されます。',
+      directionRuleTooltip:
+        '方角は緯度・経度の数値の大小で判定しています。例：ワシントンDC（西経 約77°）は東京（東経 約140°）よりも「西」と判定されます。日付変更線付近では直感と異なる場合があります。',
     },
   },
   en: {
@@ -330,6 +335,7 @@ export const translations = {
       chartMatches: 'Matches',
       chartCandlestick: 'Candle',
       chartLine: 'Line',
+      cautionNote: 'Important Note',
       ratingRank: 'Rank',
       statsBest: 'Best',
       statsAvg: 'Avg',
@@ -401,6 +407,10 @@ export const translations = {
       step3Title: 'Aim for the exact direction',
       step3Desc:
         'Guess the exact direction to increase your score and master the geographical relationships of cities around the world!',
+      step2Note:
+        '* Directions are determined by comparing latitude/longitude values — like positions on a flat map, not shortest distance on a globe. For example, Washington D.C. (≈77°W) is judged as "West" of Tokyo (≈140°E).',
+      directionRuleTooltip:
+        'Directions are based on latitude/longitude values. E.g. Washington D.C. (≈77°W) is "West" of Tokyo (≈140°E). Results near the Date Line may seem counterintuitive.',
     },
   },
 };

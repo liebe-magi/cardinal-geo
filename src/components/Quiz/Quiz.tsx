@@ -4,6 +4,7 @@ import { formatDirection } from '../../lib/quiz';
 import { useGameStore } from '../../stores/gameStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { Header } from '../Header';
+import { InfoPopover } from '../InfoPopover';
 import { CompassGrid } from './CompassGrid';
 import { StatsBar } from './StatsBar';
 
@@ -74,6 +75,14 @@ export function Quiz() {
               {t.ui.of} <span className="city-badge city-badge-origin">{cityBName}</span>
             </>
           )}
+        </div>
+
+        <div className="text-center mb-3">
+          <InfoPopover label={t.ui.cautionNote}>
+            <p className="text-sm text-text-primary leading-relaxed font-medium">
+              {t.landing.directionRuleTooltip}
+            </p>
+          </InfoPopover>
         </div>
 
         {/* Compass grid */}

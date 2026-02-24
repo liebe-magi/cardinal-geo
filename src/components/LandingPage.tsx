@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { formatCoord, formatDirection } from '../lib/quiz';
 import { useAuthStore } from '../stores/authStore';
 import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { Header } from './Header';
-import { ResultMap } from './ResultMap';
 import { CompassGrid } from './Quiz/CompassGrid';
 import { StatsBar } from './Quiz/StatsBar';
-import { formatCoord, formatDirection } from '../lib/quiz';
+import { ResultMap } from './ResultMap';
 
 export function LandingPage() {
   const { t, lang } = useSettingsStore();
@@ -395,6 +395,11 @@ export function LandingPage() {
                   <p className="text-text-secondary text-base leading-relaxed">
                     {t.landing.step2Desc}
                   </p>
+                  <div className="mt-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                    <p className="text-amber-300 text-sm leading-relaxed font-medium">
+                      {t.landing.step2Note}
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className="flex gap-4 p-4 rounded-xl bg-bg/40 border border-white/5">

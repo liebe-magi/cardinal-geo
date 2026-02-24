@@ -483,6 +483,79 @@ body {
   cursor: not-allowed;
 }
 
+/* Info Popover */
+.info-popover-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.info-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: center;
+  color: var(--color-warning);
+  cursor: pointer;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    color 0.2s,
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
+}
+
+.info-trigger:hover,
+.info-trigger:focus-visible {
+  color: #ffd76a;
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.7);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.info-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  min-width: 280px;
+  max-width: 360px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.info-popover-content {
+  background: linear-gradient(135deg, rgba(20, 20, 31, 0.95), rgba(30, 30, 46, 0.9));
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(251, 191, 36, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+@media (max-width: 640px) {
+  .info-popover {
+    position: fixed;
+    top: auto;
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    transform: none;
+    max-width: none;
+  }
+}
+
 /* Scrollbar styling */
 #app::-webkit-scrollbar {
   width: 4px;

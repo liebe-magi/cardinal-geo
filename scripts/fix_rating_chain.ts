@@ -7,13 +7,11 @@
  *
  * This script:
  * 1. Fetches all match_history for a given user, ordered by created_at ASC
- * 2. Skips records without opponent snapshots (pre-migration), using them as anchors
- * 3. For records WITH opponent snapshots, detects chain breaks and re-calculates
- * 4. Outputs SQL UPDATE statements for review / execution
- *
- * Key design: records WITHOUT opponent_rating/rd/vol are treated as trust-the-DB
- * anchor points — their values are accepted as-is and used to set the running state.
- * Only records WITH complete opponent snapshots can be re-calculated.
+ * 2. Replays ALL matches from the very first one using Glicko-2
+ * 3. For records WITH opponent snapshots, uses the recorded opponent rating/rd/vol
+ * 4. For records WITHOUT opponent snapshots (pre-migration), uses question_rating_before
+ *    with default rd=350, vol=0.06 as the opponent
+ * 5. Outputs SQL UPDATE statements for review / execution
  *
  * Usage:
  *   USER_ID=<uuid> SUPABASE_URL=<url> SUPABASE_SERVICE_ROLE_KEY=<key> npx tsx scripts/fix_rating_chain.ts
@@ -69,26 +67,28 @@ function calculateNewPlayerRating(
 
 /** Check if a record has complete opponent snapshot data */
 function hasOpponentSnapshot(m: MatchRow): boolean {
-  return (
-    m.opponent_rating !== null &&
-    m.opponent_rd !== null &&
-    m.opponent_vol !== null &&
-    m.user_rd_before !== null &&
-    m.user_rd_before > 0 &&
-    m.user_vol_before !== null &&
-    m.user_vol_before > 0
-  );
+  return m.opponent_rating !== null && m.opponent_rd !== null && m.opponent_vol !== null;
 }
 
 /** Check if a record has complete "after" snapshot data */
 function hasAfterSnapshot(m: MatchRow): boolean {
-  return (
-    m.user_rating_after !== null &&
-    m.user_rd_after !== null &&
-    m.user_rd_after > 0 &&
-    m.user_vol_after !== null &&
-    m.user_vol_after > 0
-  );
+  return m.user_rating_after !== null && m.user_rd_after !== null && m.user_vol_after !== null;
+}
+
+/** Map match_history.mode to its rating group (= user_mode_ratings.mode).
+ *  Mirrors v_rating_mode logic in submit_rated_answer().
+ *
+ *  survival_rated / challenge_rated  → 'global'   (shared chain)
+ *  starter_rated                     → 'starter_rated'  (independent)
+ *  asia_rated                        → 'asia_rated'     (independent)
+ *  europe_rated                      → 'europe_rated'   (independent)
+ *  africa_rated                      → 'africa_rated'   (independent)
+ *  americas_rated                    → 'americas_rated'  (independent)
+ *  oceania_rated                     → 'oceania_rated'  (independent)
+ */
+function modeToRatingGroup(mode: string): string {
+  if (mode === 'survival_rated' || mode === 'challenge_rated') return 'global';
+  return mode;
 }
 
 // ── Match row type ──────────────────────────────────────────────────
@@ -105,6 +105,7 @@ interface MatchRow {
   user_vol_before: number | null;
   user_vol_after: number | null;
   rating_change: number | null;
+  question_rating_before: number;
   opponent_rating: number | null;
   opponent_rd: number | null;
   opponent_vol: number | null;
@@ -190,78 +191,109 @@ async function main() {
     };
   };
 
+  interface GroupState {
+    running: GlickoRating | null;
+    /** True when running.rd/vol are estimated (not from real snapshot data) */
+    rdEstimated: boolean;
+    fixingChain: boolean;
+    justLeftAnchorZone: boolean;
+    breakCount: number;
+    anchorCount: number;
+  }
+
+  const groupStates = new Map<string, GroupState>();
+  function getGroupState(group: string): GroupState {
+    if (!groupStates.has(group)) {
+      groupStates.set(group, {
+        running: null,
+        rdEstimated: false,
+        fixingChain: false,
+        justLeftAnchorZone: false,
+        breakCount: 0,
+        anchorCount: 0,
+      });
+    }
+    return groupStates.get(group)!;
+  }
+
   const updates: UpdateEntry[] = [];
-  let running: GlickoRating | null = null; // null = not yet anchored
-  let fixingChain = false; // currently in a broken chain region
-  let justLeftAnchorZone = false; // just transitioned from no-snapshot to snapshot records
-  let breakCount = 0;
-  let anchorCount = 0;
 
   for (let i = 0; i < matches.length; i++) {
     const m = matches[i] as MatchRow;
+    const group = modeToRatingGroup(m.mode);
+    const gs = getGroupState(group);
 
     // ─ Records without opponent snapshot: ANCHOR point ─
     if (!hasOpponentSnapshot(m)) {
-      // Accept DB values as-is; use "after" as the new running state
       if (hasAfterSnapshot(m)) {
-        running = {
+        // Full after snapshot — reliable anchor
+        gs.running = {
           rating: m.user_rating_after!,
           rd: m.user_rd_after!,
           vol: m.user_vol_after!,
         };
+        gs.rdEstimated = false;
+      } else if (m.user_rating_after !== null) {
+        // Partial: rating_after exists but no rd/vol_after.
+        // Preserve the rating chain; carry forward rd/vol from previous state
+        // or use conservative defaults. The next snapshot record will refine rd/vol.
+        gs.running = {
+          rating: m.user_rating_after,
+          rd: gs.running?.rd ?? 350,
+          vol: gs.running?.vol ?? 0.06,
+        };
+        gs.rdEstimated = true;
       } else {
-        // No after data either — reset running so the next snapshot record self-anchors
-        running = null;
+        // No after data at all — reset
+        gs.running = null;
+        gs.rdEstimated = false;
       }
-      if (fixingChain) {
-        console.log(`  ℹ Anchor point (no snapshot) at id=${m.id} — chain fix paused`);
+      if (gs.fixingChain) {
+        console.log(`  ℹ Anchor point (no snapshot) at id=${m.id} [${group}] — chain fix paused`);
       }
-      fixingChain = false;
-      justLeftAnchorZone = true;
-      anchorCount++;
+      gs.fixingChain = false;
+      gs.justLeftAnchorZone = true;
+      gs.anchorCount++;
       continue;
     }
 
     // ─ Records WITH opponent snapshot ─
 
-    // If we don't have a running state yet, anchor from this record's "before"
-    if (running === null) {
-      running = {
+    if (gs.running === null) {
+      gs.running = {
         rating: m.user_rating_before,
         rd: m.user_rd_before!,
         vol: m.user_vol_before!,
       };
-      justLeftAnchorZone = false;
+      gs.justLeftAnchorZone = false;
     }
 
-    // When transitioning from no-snapshot to snapshot zone, trust this record's
-    // own user_rating_before over the anchor's user_rating_after, since the
-    // anchor (pre-migration) might itself be unreliable.
-    if (justLeftAnchorZone) {
-      const anchorGap = Math.abs(m.user_rating_before - running.rating);
-      if (anchorGap > TOLERANCE) {
+    if (gs.justLeftAnchorZone) {
+      if (gs.rdEstimated && m.user_rd_before !== null && m.user_vol_before !== null) {
+        // Anchor had rating but no real rd/vol — adopt this record's rd/vol
+        // while keeping the anchor's more trustworthy rating.
         console.log(
-          `  ℹ Anchor→snapshot transition at id=${m.id}: ` +
-            `anchor=${running.rating.toFixed(2)}, record=${m.user_rating_before.toFixed(2)}, ` +
-            `gap=${anchorGap.toFixed(2)} — trusting record's own value`,
+          `  ℹ Anchor→snapshot transition at id=${m.id} [${group}]: ` +
+            `anchor rating=${gs.running.rating.toFixed(2)}, ` +
+            `adopting record rd=${m.user_rd_before.toFixed(2)}, vol=${m.user_vol_before.toFixed(6)}`,
         );
-        running = {
-          rating: m.user_rating_before,
-          rd: m.user_rd_before!,
-          vol: m.user_vol_before!,
+        gs.running = {
+          rating: gs.running.rating, // trust anchor's rating
+          rd: m.user_rd_before, // adopt record's rd (best available)
+          vol: m.user_vol_before, // adopt record's vol
         };
+        gs.rdEstimated = false;
       }
-      justLeftAnchorZone = false;
+      gs.justLeftAnchorZone = false;
     }
 
     // Check chain continuity
-    const ratingMatch = Math.abs(m.user_rating_before - running.rating) < TOLERANCE;
-    const rdMatch = Math.abs((m.user_rd_before ?? 0) - running.rd) < TOLERANCE;
+    const ratingMatch = Math.abs(m.user_rating_before - gs.running.rating) < TOLERANCE;
+    const rdMatch = Math.abs((m.user_rd_before ?? 0) - gs.running.rd) < TOLERANCE;
 
-    if (ratingMatch && rdMatch && !fixingChain) {
-      // Chain is intact — advance running state from DB values
+    if (ratingMatch && rdMatch && !gs.fixingChain) {
       if (hasAfterSnapshot(m)) {
-        running = {
+        gs.running = {
           rating: m.user_rating_after!,
           rd: m.user_rd_after!,
           vol: m.user_vol_after!,
@@ -271,16 +303,16 @@ async function main() {
     }
 
     // ─ Chain break detected or we're in a fixing region ─
-    if (!fixingChain) {
-      breakCount++;
+    if (!gs.fixingChain) {
+      gs.breakCount++;
       console.log(
-        `\n⚠ Chain break #${breakCount} at match id=${m.id} (idx ${i}):` +
-          `\n  Expected before: rating=${running.rating.toFixed(5)}, rd=${running.rd.toFixed(5)}` +
+        `\n⚠ Chain break #${gs.breakCount} at match id=${m.id} (idx ${i}) [${group}]:` +
+          `\n  Expected before: rating=${gs.running.rating.toFixed(5)}, rd=${gs.running.rd.toFixed(5)}` +
           `\n  Actual   before: rating=${m.user_rating_before.toFixed(5)}, rd=${(m.user_rd_before ?? 0).toFixed(5)}` +
           `\n  Session: ${m.session_id}` +
           `\n  Status: ${m.status}`,
       );
-      fixingChain = true;
+      gs.fixingChain = true;
     }
 
     // Re-calculate Glicko-2 with correct running base
@@ -290,14 +322,13 @@ async function main() {
       vol: m.opponent_vol!,
     };
     const score: 0 | 1 = m.status === 'win' ? 1 : 0;
-    const newPlayerRating = calculateNewPlayerRating(running, opponent, score);
-    const ratingChange = newPlayerRating.rating - running.rating;
+    const newPlayerRating = calculateNewPlayerRating(gs.running, opponent, score);
+    const ratingChange = newPlayerRating.rating - gs.running.rating;
 
-    // Check if anything actually differs from DB
     const needsUpdate =
-      Math.abs(m.user_rating_before - running.rating) > TOLERANCE ||
+      Math.abs(m.user_rating_before - gs.running.rating) > TOLERANCE ||
       Math.abs((m.user_rating_after ?? 0) - newPlayerRating.rating) > TOLERANCE ||
-      Math.abs((m.user_rd_before ?? 0) - running.rd) > TOLERANCE ||
+      Math.abs((m.user_rd_before ?? 0) - gs.running.rd) > TOLERANCE ||
       Math.abs((m.user_rd_after ?? 0) - newPlayerRating.rd) > TOLERANCE;
 
     if (needsUpdate) {
@@ -315,36 +346,46 @@ async function main() {
           rating_change: m.rating_change,
         },
         new: {
-          user_rating_before: running.rating,
+          user_rating_before: gs.running.rating,
           user_rating_after: newPlayerRating.rating,
-          user_rd_before: running.rd,
+          user_rd_before: gs.running.rd,
           user_rd_after: newPlayerRating.rd,
-          user_vol_before: running.vol,
+          user_vol_before: gs.running.vol,
           user_vol_after: newPlayerRating.vol,
           rating_change: ratingChange,
         },
       });
-    } else if (fixingChain) {
-      // Chain was broken but this record happens to compute identically → chain healed
-      console.log(`  ✓ Chain healed at id=${m.id} — values match after recalculation`);
-      fixingChain = false;
+    } else if (gs.fixingChain) {
+      console.log(`  ✓ Chain healed at id=${m.id} [${group}] — values match after recalculation`);
+      gs.fixingChain = false;
     }
 
-    running = newPlayerRating;
+    gs.running = newPlayerRating;
   }
 
   // ── Report ──────────────────────────────────────────────────────────
 
+  // Aggregate stats across all rating groups
+  let totalBreaks = 0;
+  let totalAnchors = 0;
+  for (const [, gs] of groupStates) {
+    totalBreaks += gs.breakCount;
+    totalAnchors += gs.anchorCount;
+  }
+
   console.log(`\n${'='.repeat(60)}`);
   console.log(`Total matches scanned: ${matches.length}`);
-  console.log(`Anchor points (no snapshot): ${anchorCount}`);
-  console.log(`Chain breaks found: ${breakCount}`);
+  console.log(`Rating groups: ${[...groupStates.keys()].join(', ')}`);
+  console.log(`Anchor points (no snapshot): ${totalAnchors}`);
+  console.log(`Chain breaks found: ${totalBreaks}`);
   console.log(`Records to update: ${updates.length}`);
 
-  if (running) {
-    console.log(`\nFinal chained rating: ${running.rating.toFixed(5)}`);
-    console.log(`Final chained RD:     ${running.rd.toFixed(5)}`);
-    console.log(`Final chained vol:    ${running.vol.toFixed(13)}`);
+  for (const [group, gs] of groupStates) {
+    if (gs.running) {
+      console.log(`\n[${group}] Final chained rating: ${gs.running.rating.toFixed(5)}`);
+      console.log(`[${group}] Final chained RD:     ${gs.running.rd.toFixed(5)}`);
+      console.log(`[${group}] Final chained vol:    ${gs.running.vol.toFixed(13)}`);
+    }
   }
 
   if (updates.length === 0) {
@@ -375,7 +416,7 @@ async function main() {
   sqlLines.push('-- Fix rating chain for user ' + USER_ID);
   sqlLines.push('-- Generated by scripts/fix_rating_chain.ts');
   sqlLines.push(`-- ${new Date().toISOString()}`);
-  sqlLines.push(`-- Chain breaks: ${breakCount}, Records updated: ${updates.length}`);
+  sqlLines.push(`-- Chain breaks: ${totalBreaks}, Records updated: ${updates.length}`);
   sqlLines.push('BEGIN;');
   sqlLines.push('');
 
@@ -402,17 +443,19 @@ async function main() {
     sqlLines.push('');
   }
 
-  // Update user_mode_ratings to match the final chained value
-  if (running) {
-    sqlLines.push('-- Update user_mode_ratings to final chained value');
-    sqlLines.push(
-      `UPDATE public.user_mode_ratings SET` +
-        `\n  rating = ${running.rating},` +
-        `\n  rd = ${running.rd},` +
-        `\n  vol = ${running.vol}` +
-        `\nWHERE user_id = '${USER_ID}' AND mode = 'global';`,
-    );
-    sqlLines.push('');
+  // Update user_mode_ratings for each rating group
+  for (const [group, gs] of groupStates) {
+    if (gs.running) {
+      sqlLines.push(`-- Update user_mode_ratings for ${group}`);
+      sqlLines.push(
+        `UPDATE public.user_mode_ratings SET` +
+          `\n  rating = ${gs.running.rating},` +
+          `\n  rd = ${gs.running.rd},` +
+          `\n  vol = ${gs.running.vol}` +
+          `\nWHERE user_id = '${USER_ID}' AND mode = '${group}';`,
+      );
+      sqlLines.push('');
+    }
   }
 
   sqlLines.push('COMMIT;');
