@@ -303,6 +303,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     };
 
     let ratingChange: number | undefined;
+    let newPlayerRating: GlickoRating | undefined;
 
     // Handle rated mode
     const isRated = get().isRatedMode();
@@ -365,6 +366,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       );
 
       ratingChange = result.ratingChange;
+      newPlayerRating = result.player;
       record.ratingChange = ratingChange;
 
       // Prepare city updates for DB
@@ -389,15 +391,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         cityUpdates,
         compositeOpponent, // snapshot opponent rating/rd/vol for replay
       );
-
-      // Chain the rating locally so the next question uses updated values
-      // (avoids dependency on fetchProfile which may return stale data)
-      set((state) => ({
-        gameState: {
-          ...state.gameState,
-          currentPlayerRating: result.player,
-        },
-      }));
 
       // Refresh profile for UI display (non-critical for computation,
       // but awaited so downstream UI reads see the latest data)
@@ -482,6 +475,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({
       gameState: {
         ...gameState,
+        currentPlayerRating: newPlayerRating ?? gameState.currentPlayerRating,
         score: newScore,
         questionCount: newQuestionCount,
         history: newHistory,
