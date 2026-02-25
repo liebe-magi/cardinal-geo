@@ -540,7 +540,7 @@ export function ModeSelect() {
           </button>
 
           {/* Stats & Profile Row */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             {/* Global Stats Button */}
             <button
               onClick={() => navigate('/stats')}
@@ -555,6 +555,24 @@ export function ModeSelect() {
                 </div>
                 <div className="text-blue-400/60 text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold mt-0.5 truncate">
                   Analytics
+                </div>
+              </div>
+            </button>
+
+            {/* Game Log Button */}
+            <button
+              onClick={() => navigate('/game-log')}
+              className="group relative flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-surface-light/20 border border-indigo-500/20 hover:border-indigo-400/50 cursor-pointer transition-all duration-300 overflow-hidden hover:shadow-[0_0_20px_rgba(99,102,241,0.15)] hover:-translate-y-0.5"
+            >
+              <div className="w-10 h-10 shrink-0 rounded-full bg-indigo-500/20 flex items-center justify-center text-xl border border-indigo-500/30 group-hover:scale-110 transition-transform duration-300">
+                🗂️
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <div className="text-indigo-100 font-bold text-sm sm:text-base group-hover:text-indigo-300 transition-colors truncate">
+                  {t.ui.gameLog || 'ゲームログ'}
+                </div>
+                <div className="text-indigo-400/60 text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold mt-0.5 truncate">
+                  Match History
                 </div>
               </div>
             </button>

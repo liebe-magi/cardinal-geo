@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { About } from './components/About';
 import { FinalResult } from './components/FinalResult';
+import { GameLog } from './components/GameLog';
 import { GlobalStats } from './components/GlobalStats';
 import { LandingPage } from './components/LandingPage';
 import { Login } from './components/Login';
@@ -74,6 +75,14 @@ export function App() {
             element={
               <ProtectedRoute>
                 <GlobalStats />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/game-log"
+            element={
+              <ProtectedRoute>
+                <GameLog />
               </ProtectedRoute>
             }
           />
