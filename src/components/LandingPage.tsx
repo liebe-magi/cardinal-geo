@@ -204,16 +204,6 @@ export function LandingPage() {
           <div className="grid grid-cols-2 gap-3 mb-5">
             {[
               {
-                role: 'Target',
-                name: lang === 'ja' ? cityA.capitalJp : cityA.capitalEn,
-                country: lang === 'ja' ? cityA.nameJp : cityA.nameEn,
-                city: cityA,
-                wiki: `https://${lang}.wikipedia.org/wiki/${lang === 'ja' ? cityA.capitalJp : cityA.capitalEn}`,
-                color: 'primary',
-                borderColor: 'border-primary/20',
-                bgColor: 'bg-primary/5',
-              },
-              {
                 role: 'Origin',
                 name: lang === 'ja' ? cityB.capitalJp : cityB.capitalEn,
                 country: lang === 'ja' ? cityB.nameJp : cityB.nameEn,
@@ -222,6 +212,16 @@ export function LandingPage() {
                 color: 'secondary',
                 borderColor: 'border-secondary/20',
                 bgColor: 'bg-secondary/5',
+              },
+              {
+                role: 'Target',
+                name: lang === 'ja' ? cityA.capitalJp : cityA.capitalEn,
+                country: lang === 'ja' ? cityA.nameJp : cityA.nameEn,
+                city: cityA,
+                wiki: `https://${lang}.wikipedia.org/wiki/${lang === 'ja' ? cityA.capitalJp : cityA.capitalEn}`,
+                color: 'primary',
+                borderColor: 'border-primary/20',
+                bgColor: 'bg-primary/5',
               },
             ].map((info) => (
               <div
@@ -470,6 +470,54 @@ export function LandingPage() {
                       lon: 139.6503,
                     }}
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <div className="bg-secondary/5 border border-secondary/20 rounded-xl p-3 sm:p-4 flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-secondary uppercase tracking-wider">
+                      Origin
+                    </span>
+                    <span className="text-sm font-bold text-text-primary text-center">
+                      {lang === 'ja' ? '東京' : 'Tokyo'}
+                    </span>
+                    <span className="text-xs text-text-secondary">
+                      {lang === 'ja' ? '日本' : 'Japan'}
+                    </span>
+                    <span className="text-xs text-text-secondary font-mono">
+                      {formatCoord(35.6762, 'lat')} / {formatCoord(139.6503, 'lon')}
+                    </span>
+                    <a
+                      href={`https://${lang}.wikipedia.org/wiki/${lang === 'ja' ? '東京' : 'Tokyo'}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:text-cyan-300 transition-colors"
+                    >
+                      Wikipedia ↗
+                    </a>
+                  </div>
+
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 sm:p-4 flex flex-col items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-primary uppercase tracking-wider">
+                      Target
+                    </span>
+                    <span className="text-sm font-bold text-text-primary text-center">
+                      {lang === 'ja' ? 'パリ' : 'Paris'}
+                    </span>
+                    <span className="text-xs text-text-secondary">
+                      {lang === 'ja' ? 'フランス' : 'France'}
+                    </span>
+                    <span className="text-xs text-text-secondary font-mono">
+                      {formatCoord(48.8566, 'lat')} / {formatCoord(2.3522, 'lon')}
+                    </span>
+                    <a
+                      href={`https://${lang}.wikipedia.org/wiki/${lang === 'ja' ? 'パリ' : 'Paris'}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:text-cyan-300 transition-colors"
+                    >
+                      Wikipedia ↗
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>

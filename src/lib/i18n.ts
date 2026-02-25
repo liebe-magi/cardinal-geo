@@ -165,6 +165,10 @@ export const translations = {
       updateRequiredBody:
         '新しいバージョンが公開されています。ページを更新してからプレイしてください。',
       updateRequiredReload: 'ページを更新する',
+      gameLog: 'ゲームログ',
+      gameLogTitle: 'ゲームログ',
+      gameLogHint: '各モードの直近30件の結果を確認できます',
+      gameLogNoData: 'まだゲームログがありません',
     },
     directions: {
       N: '北',
@@ -371,6 +375,10 @@ export const translations = {
       updateRequiredTitle: 'Update Required',
       updateRequiredBody: 'A new version is available. Please reload the page before playing.',
       updateRequiredReload: 'Reload Page',
+      gameLog: 'Game Log',
+      gameLogTitle: 'Game Log',
+      gameLogHint: 'Review the latest 30 game results for each mode.',
+      gameLogNoData: 'No game logs yet',
     },
     directions: {
       N: 'N',

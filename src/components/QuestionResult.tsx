@@ -170,16 +170,6 @@ export function QuestionResult() {
         <div className="grid grid-cols-2 gap-3 mb-5">
           {[
             {
-              role: 'Target',
-              name: cityAName,
-              country: cityACountry,
-              city: cityA,
-              wiki: wikiA,
-              color: 'primary',
-              borderColor: 'border-primary/20',
-              bgColor: 'bg-primary/5',
-            },
-            {
               role: 'Origin',
               name: cityBName,
               country: cityBCountry,
@@ -188,6 +178,16 @@ export function QuestionResult() {
               color: 'secondary',
               borderColor: 'border-secondary/20',
               bgColor: 'bg-secondary/5',
+            },
+            {
+              role: 'Target',
+              name: cityAName,
+              country: cityACountry,
+              city: cityA,
+              wiki: wikiA,
+              color: 'primary',
+              borderColor: 'border-primary/20',
+              bgColor: 'bg-primary/5',
             },
           ].map((info) => (
             <div

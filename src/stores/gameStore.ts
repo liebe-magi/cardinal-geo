@@ -384,6 +384,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       await submitRatedAnswer(
         gameState.currentMatchHistoryId,
         isCorrect,
+        userGuess,
         result.player,
         newPairRating,
         result.ratingChange,
