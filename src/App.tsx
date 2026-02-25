@@ -12,6 +12,7 @@ import { QuestionResult } from './components/QuestionResult';
 import { Quiz } from './components/Quiz/Quiz';
 import { Ranking } from './components/Ranking/Ranking';
 import { SetupUsername } from './components/SetupUsername';
+import { Updates } from './components/Updates';
 
 export function App() {
   return (
@@ -21,6 +22,7 @@ export function App() {
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/about" element={<About />} />
+          <Route path="/updates" element={<Updates />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/weakness" element={<Navigate to="/profile" replace />} />
           <Route path="/login" element={<Login />} />

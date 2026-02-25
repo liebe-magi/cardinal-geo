@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { fetchAppConfig } from '../lib/appConfig';
 import { regionLabels, type Region } from '../lib/regions';
 import { getUTCDateString } from '../lib/seededRandom';
 import { fetchAllModeStats, fetchRatingRank, getDailyProgress } from '../lib/supabaseApi';
+import { getLatestUpdateNote } from '../lib/updates';
 import { useAuthStore } from '../stores/authStore';
 import { useGameStore } from '../stores/gameStore';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -12,6 +13,7 @@ import { Header } from './Header';
 
 export function ModeSelect() {
   const { t, lang } = useSettingsStore();
+  const latestUpdate = useMemo(() => getLatestUpdateNote(), []);
   const { isAuthenticated, profile, user } = useAuthStore();
   const startGame = useGameStore((s) => s.startGame);
   const pendingSettledCount = useGameStore((s) => s.pendingSettledCount);
@@ -596,6 +598,39 @@ export function ModeSelect() {
             </button>
           </div>
         </div>
+
+        {latestUpdate && (
+          <div className="glass-card p-4 sm:p-5 border border-cyan-400/20 bg-gradient-to-br from-cyan-500/10 via-surface-light/40 to-transparent">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="inline-flex items-center gap-2">
+                <span className="text-lg">🆕</span>
+                <h2 className="text-sm sm:text-base font-bold text-text-primary">
+                  {lang === 'ja' ? '最新アップデート' : 'Latest Update'}
+                </h2>
+                <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25 font-mono">
+                  v{latestUpdate.version}
+                </span>
+              </div>
+              <span className="text-[11px] text-text-secondary font-mono">
+                {latestUpdate.publishedAt}
+              </span>
+            </div>
+            <h3 className="text-text-primary font-semibold text-sm sm:text-base mb-1.5">
+              {latestUpdate.title[lang]}
+            </h3>
+            <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
+              {latestUpdate.summary[lang]}
+            </p>
+            <div className="mt-3">
+              <Link
+                to="/updates"
+                className="text-xs sm:text-sm text-primary hover:text-cyan-300 transition-colors underline"
+              >
+                {lang === 'ja' ? '更新履歴をみる' : 'View all updates'}
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

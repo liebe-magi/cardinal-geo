@@ -1,0 +1,73 @@
+[
+  {
+    "id": "v1.0.2",
+    "version": "1.0.2",
+    "publishedAt": "2026-02-25",
+    "title": {
+      "ja": "安定性改善と結果画面の視認性向上",
+      "en": "Stability improvements and clearer result screens"
+    },
+    "summary": {
+      "ja": "結果の見やすさと、プレイ中の安定性を改善しました。",
+      "en": "Improved result readability and overall play stability."
+    },
+    "changes": {
+      "ja": [
+        "結果画面でスコアや表示情報を見やすく調整",
+        "Result Map の Origin / Target 表示を改善し、正解確認をしやすく改善",
+        "ランディングページのデモに首都情報と Wikipedia リンクを追加",
+        "一部環境で発生していたレーティング反映の不安定さを改善"
+      ],
+      "en": [
+        "Refined score and result information layout for better readability",
+        "Improved Origin/Target clarity in the result map for easier review",
+        "Added capital info and Wikipedia links to the landing-page demo",
+        "Improved rating update stability in edge cases"
+      ]
+    }
+  },
+  {
+    "id": "v1.0.1",
+    "version": "1.0.1",
+    "publishedAt": "2026-02-23",
+    "title": {
+      "ja": "モード別レーティング導入と集計精度の改善",
+      "en": "Per-mode ratings and stats accuracy improvements"
+    },
+    "summary": {
+      "ja": "モードごとの実力が反映されるようになり、スコア・ランキング表示の精度を改善しました。",
+      "en": "Ratings now better reflect performance by mode, with improved score/ranking accuracy."
+    },
+    "changes": {
+      "ja": [
+        "モード別レーティング（Global / Starter / Region）を導入",
+        "デイリーチャレンジ結果と統計表示の整合性を改善",
+        "ランキング・プロフィールの表示内容を調整し、比較しやすさを向上",
+        "一部の試合結果が正しく反映されにくい問題を修正"
+      ],
+      "en": [
+        "Introduced per-mode ratings (Global / Starter / Region)",
+        "Improved consistency of daily challenge results and stats",
+        "Refined ranking/profile displays for easier comparison",
+        "Fixed cases where some match results were not reflected reliably"
+      ]
+    }
+  },
+  {
+    "id": "v1.0.0",
+    "version": "1.0.0",
+    "publishedAt": "2026-02-23",
+    "title": {
+      "ja": "正式版リリース",
+      "en": "Stable 1.0.0 release"
+    },
+    "summary": {
+      "ja": "Cardinal Geo の初回正式リリースです。",
+      "en": "First stable release of Cardinal Geo."
+    },
+    "changes": {
+      "ja": ["基本機能を搭載した初回公開版です。"],
+      "en": ["Initial public release with core gameplay features."]
+    }
+  }
+]
