@@ -23,6 +23,7 @@ const persistAnswer = async (_id, correct, answer, rating, _pair, change) => {
 };
 const submitRatedAnswer = mock(persistAnswer);
 const saveDailyProgress = mock(async () => ({}));
+const settlePendingMatches = mock(async () => 0);
 const getDailyProgress = mock(async () => null);
 const getMatchForRecovery = mock(async () => savedMatch);
 mock.module('../src/lib/supabase', () => ({ supabase: null }));
@@ -30,7 +31,7 @@ mock.module('../src/lib/supabaseApi', () => ({
   createPendingMatch,
   submitRatedAnswer,
   getMatchForRecovery,
-  settlePendingMatches: async () => 0,
+  settlePendingMatches,
   getOrCreateQuestion: async (question) => {
     const { normalizedA, normalizedB, correctDirection } = normalizePair(
       question.cityA,
@@ -59,6 +60,8 @@ const { useGameStore } = await import('../src/stores/gameStore');
 const { useAuthStore } = await import('../src/stores/authStore');
 
 beforeEach(() => {
+  settlePendingMatches.mockReset();
+  settlePendingMatches.mockImplementation(async () => 0);
   getDailyProgress.mockReset();
   getDailyProgress.mockImplementation(async () => null);
   createPendingMatch.mockClear();
@@ -238,4 +241,58 @@ test('five answers survive resume, ten survive review, and date stays fixed at U
   expect(review.ratingBefore).toBe(completed.ratingBefore);
   expect(review.ratingAfter).toBe(completed.ratingAfter);
   expect(review.totalRatingChange).toBeCloseTo(review.ratingAfter - review.ratingBefore, 8);
+});
+
+test('double start is suppressed and a late start cannot overwrite a reset session', async () => {
+  let release;
+  settlePendingMatches.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  );
+  const old = useGameStore.getState().startGame('survival', 'rated');
+  await useGameStore.getState().startGame('starter', 'rated');
+  expect(settlePendingMatches).toHaveBeenCalledTimes(1);
+  useGameStore.getState().reset();
+  await useGameStore.getState().startGame('learning', 'unrated');
+  release(0);
+  await old;
+  expect(useGameStore.getState().gameState.mode).toBe('learning');
+  expect(useGameStore.getState().phase).toBe('answering');
+});
+
+test('a late answer cannot overwrite a new game', async () => {
+  await useGameStore.getState().startGame('survival', 'rated');
+  useGameStore.getState().setUserGuess(useGameStore.getState().currentQuestion.correctDirection);
+  let release;
+  getMatchForRecovery.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+  );
+  const old = useGameStore.getState().submitAnswer();
+  useGameStore.getState().reset();
+  await useGameStore.getState().startGame('learning', 'unrated');
+  release({ status: 'pending' });
+  await old;
+  expect(useGameStore.getState().gameState.mode).toBe('learning');
+  expect(useGameStore.getState().gameState.score).toBe(0);
+  expect(useGameStore.getState().phase).toBe('answering');
+});
+
+test('the store owns completion and rejects answers after completion', async () => {
+  for (const mode of ['survival', 'starter', 'asia']) {
+    useGameStore.getState().reset();
+    await useGameStore.getState().startGame(mode, 'rated');
+    const direction = useGameStore.getState().currentQuestion.correctDirection;
+    useGameStore.getState().setUserGuess({ ...direction, ns: direction.ns === 'N' ? 'S' : 'N' });
+    await useGameStore.getState().submitAnswer();
+    await useGameStore.getState().nextQuestion();
+    expect(useGameStore.getState().phase).toBe('completed');
+    const count = submitRatedAnswer.mock.calls.length;
+    await useGameStore.getState().submitAnswer();
+    expect(submitRatedAnswer.mock.calls.length).toBe(count);
+  }
 });

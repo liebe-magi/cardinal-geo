@@ -23,7 +23,6 @@ export function FinalResult() {
   type HighScoreCategory = 'survival_rated' | 'survival_unrated';
   const getCategory = (): HighScoreCategory | null => {
     if (gameState.mode === 'survival' && gameState.subMode === 'rated') return 'survival_rated';
-    if (gameState.mode === 'survival' && gameState.subMode === 'unrated') return 'survival_unrated';
     return null;
   };
 

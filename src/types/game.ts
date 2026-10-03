@@ -1,4 +1,5 @@
 import type { GlickoRating } from '../lib/glicko2';
+import { normalizeSelection, type GameSelection } from '../lib/gameModes';
 import type { Region } from '../lib/regions';
 import type { City } from './city';
 
@@ -27,9 +28,7 @@ export interface QuestionRecord {
   isPartialCorrect?: boolean;
 }
 
-export interface GameState {
-  mode: GameMode;
-  subMode: GameSubMode;
+export type GameState = GameSelection & {
   score: number;
   questionCount: number;
   isGameOver: boolean;
@@ -46,12 +45,11 @@ export interface GameState {
   ratingAfter?: number;
   /** Locally-chained player rating within the session (avoids stale fetchProfile reads) */
   currentPlayerRating?: GlickoRating;
-}
+};
 
 export function createInitialGameState(mode: GameMode, subMode: GameSubMode): GameState {
   return {
-    mode,
-    subMode,
+    ...normalizeSelection(mode, subMode),
     score: 0,
     questionCount: 0,
     isGameOver: false,
