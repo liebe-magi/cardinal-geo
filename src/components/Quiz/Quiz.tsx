@@ -19,6 +19,8 @@ export function Quiz() {
     submitAnswer,
     isShowingResult,
     isProcessing,
+    error,
+    nextQuestion,
   } = useGameStore();
 
   // Redirect if no question or showing result
@@ -53,7 +55,6 @@ export function Quiz() {
 
   const handleSubmit = async () => {
     await submitAnswer();
-    navigate('/result');
   };
 
   return (
@@ -61,6 +62,22 @@ export function Quiz() {
       <Header />
       <div className="scene">
         <StatsBar gameState={gameState} />
+        {error && (
+          <div role="alert" className="text-center my-4">
+            <p>
+              {lang === 'ja'
+                ? '保存を確認できませんでした。再試行すると保存状況を確認して続行します。'
+                : 'Could not confirm the save. Retry to check the saved state and continue.'}
+            </p>
+            <button
+              className="submit-btn"
+              disabled={isProcessing}
+              onClick={error === 'question' ? nextQuestion : submitAnswer}
+            >
+              {t.ui.retry}
+            </button>
+          </div>
+        )}
 
         {/* Question text */}
         <div className="question-text">
@@ -99,7 +116,11 @@ export function Quiz() {
         </div>
 
         {/* Submit button */}
-        <button onClick={handleSubmit} disabled={isProcessing || !userGuess} className="submit-btn">
+        <button
+          onClick={handleSubmit}
+          disabled={isProcessing || !userGuess || !!error}
+          className="submit-btn"
+        >
           {isProcessing ? t.ui.loading : t.ui.submit}
         </button>
       </div>

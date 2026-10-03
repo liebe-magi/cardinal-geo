@@ -36,6 +36,8 @@ export interface DbMatchHistory {
   status: 'pending' | 'win' | 'lose';
   user_rating_before: number;
   user_rating_after: number | null;
+  user_rd_after: number | null;
+  user_vol_after: number | null;
   question_rating_before: number;
   question_rating_after: number | null;
   rating_change: number;
@@ -43,6 +45,14 @@ export interface DbMatchHistory {
   user_answer_ew: 'E' | 'W' | null;
   created_at: string;
   answered_at: string | null;
+}
+
+/** A failed read is different from a pending answer; never retry a write blindly. */
+export async function getMatchForRecovery(id: number): Promise<DbMatchHistory> {
+  if (!supabase) throw new Error('Database unavailable');
+  const { data, error } = await supabase.from('match_history').select('*').eq('id', id).single();
+  if (error || !data) throw error ?? new Error('Answer not found');
+  return data as DbMatchHistory;
 }
 
 export interface DbDailyChallengeResult {
@@ -204,8 +214,7 @@ export async function fetchCityRatings(
     .in('country_code', [codeA, codeB]);
 
   if (error || !data) {
-    console.error('Error fetching city ratings:', error);
-    return { cityA: defaults(codeA), cityB: defaults(codeB) };
+    throw error ?? new Error('City ratings unavailable');
   }
 
   const findOrDefault = (code: string): CityRating => {
@@ -255,6 +264,18 @@ export async function createPendingMatch(
   };
   if (userRdBefore != null) row.user_rd_before = userRdBefore;
   if (userVolBefore != null) row.user_vol_before = userVolBefore;
+
+  // Reuse a commitment when its insert succeeded but the response was lost.
+  const { data: existing, error: lookupError } = await supabase
+    .from('match_history')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('session_id', sessionId)
+    .eq('question_id', questionId)
+    .eq('status', 'pending')
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (existing) return existing.id;
 
   const { data, error } = await supabase.from('match_history').insert(row).select('id').single();
 

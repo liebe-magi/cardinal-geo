@@ -1,5 +1,30 @@
 [
   {
+    "id": "v1.0.3",
+    "version": "1.0.3",
+    "publishedAt": "2026-10-04",
+    "title": {
+      "ja": "回答の保存と再試行を改善",
+      "en": "More reliable answer saving and retries"
+    },
+    "summary": {
+      "ja": "通信に失敗したときに結果を確定せず、保存状況を確認して再試行できるようになりました。",
+      "en": "Results are confirmed only after saving, with retries that check whether an answer was already saved."
+    },
+    "changes": {
+      "ja": [
+        "問題や回答の保存に失敗した場合に再試行を表示",
+        "デイリーの進捗保存を待ってから結果を表示",
+        "回答ボタンの連打による重複処理を防止"
+      ],
+      "en": [
+        "Added retries when a question or answer cannot be saved",
+        "Wait for daily progress to be saved before displaying results",
+        "Prevented duplicate processing from repeated answer submissions"
+      ]
+    }
+  },
+  {
     "id": "v1.0.2",
     "version": "1.0.2",
     "publishedAt": "2026-02-25",
