@@ -6,6 +6,7 @@ import type { QuadDirection, Question } from '../types/game';
 import { type CityRating, DEFAULT_CITY_RATING } from './compositeRating';
 import { calculateNewRatings, type GlickoRating } from './glicko2';
 import { normalizePair } from './quiz';
+import { readPresentation, snapshotPresentation, type PresentationSnapshot } from './presentation';
 import { supabase } from './supabase';
 
 // ============================================================
@@ -250,6 +251,7 @@ export async function createPendingMatch(
   questionRatingBefore: number,
   userRdBefore?: number,
   userVolBefore?: number,
+  presentation?: Question,
 ): Promise<number | null> {
   if (!supabase) return null;
 
@@ -264,6 +266,7 @@ export async function createPendingMatch(
   };
   if (userRdBefore != null) row.user_rd_before = userRdBefore;
   if (userVolBefore != null) row.user_vol_before = userVolBefore;
+  if (presentation) Object.assign(row, snapshotPresentation(presentation));
 
   // Reuse a commitment when its insert succeeded but the response was lost.
   const { data: existing, error: lookupError } = await supabase
@@ -839,7 +842,7 @@ export interface GameLogMatch {
   id: number;
   status: 'win' | 'lose';
   ratingChange: number;
-  correctDirection: QuadDirection;
+  correctDirection: QuadDirection | null;
   userAnswerDirection: QuadDirection | null;
   cityACode: string;
   cityBCode: string;
@@ -942,40 +945,42 @@ export async function fetchRecentGameLogsByMode(
   const pageSize = 500;
   const maxRows = 3000;
   let from = 0;
-  const rows: Array<{
-    id: number;
-    session_id: string;
-    mode: string;
-    status: 'win' | 'lose' | 'pending';
-    rating_change: number;
-    user_answer_ns: 'N' | 'S' | null;
-    user_answer_ew: 'E' | 'W' | null;
-    user_rating_before: number | null;
-    user_rating_after: number | null;
-    answered_at: string | null;
-    created_at: string;
-    questions:
-      | {
-          city_a_code: string;
-          city_b_code: string;
-          correct_ns: 'N' | 'S';
-          correct_ew: 'E' | 'W';
-        }
-      | Array<{
-          city_a_code: string;
-          city_b_code: string;
-          correct_ns: 'N' | 'S';
-          correct_ew: 'E' | 'W';
-        }>
-      | null;
-  }> = [];
+  const rows: Array<
+    PresentationSnapshot & {
+      id: number;
+      session_id: string;
+      mode: string;
+      status: 'win' | 'lose' | 'pending';
+      rating_change: number;
+      user_answer_ns: 'N' | 'S' | null;
+      user_answer_ew: 'E' | 'W' | null;
+      user_rating_before: number | null;
+      user_rating_after: number | null;
+      answered_at: string | null;
+      created_at: string;
+      questions:
+        | {
+            city_a_code: string;
+            city_b_code: string;
+            correct_ns: 'N' | 'S';
+            correct_ew: 'E' | 'W';
+          }
+        | Array<{
+            city_a_code: string;
+            city_b_code: string;
+            correct_ns: 'N' | 'S';
+            correct_ew: 'E' | 'W';
+          }>
+        | null;
+    }
+  > = [];
 
   while (rows.length < maxRows) {
     const to = from + pageSize - 1;
     const { data, error } = await supabase
       .from('match_history')
       .select(
-        'id, session_id, mode, status, rating_change, user_answer_ns, user_answer_ew, user_rating_before, user_rating_after, answered_at, created_at, questions(city_a_code, city_b_code, correct_ns, correct_ew)',
+        'id, session_id, mode, status, rating_change, presented_target_code, presented_origin_code, presented_correct_ns, presented_correct_ew, user_answer_ns, user_answer_ew, user_rating_before, user_rating_after, answered_at, created_at, questions(city_a_code, city_b_code, correct_ns, correct_ew)',
       )
       .eq('user_id', userId)
       .eq('mode', mode)
@@ -993,6 +998,10 @@ export async function fetchRecentGameLogsByMode(
 
     rows.push(
       ...data.map((row) => ({
+        presented_target_code: row.presented_target_code,
+        presented_origin_code: row.presented_origin_code,
+        presented_correct_ns: row.presented_correct_ns,
+        presented_correct_ew: row.presented_correct_ew,
         id: row.id as number,
         session_id: row.session_id as string,
         mode: row.mode as string,
@@ -1051,24 +1060,22 @@ export async function fetchRecentGameLogsByMode(
             ? (match.questions[0] ?? null)
             : match.questions;
           if (!question) return null;
+          const presentation = readPresentation(match);
 
           return {
             id: match.id,
             status: match.status === 'win' ? 'win' : 'lose',
             ratingChange: Number(match.rating_change ?? 0),
-            correctDirection: {
-              ns: question.correct_ns,
-              ew: question.correct_ew,
-            },
+            correctDirection: presentation?.correctDirection ?? null,
             userAnswerDirection:
-              match.user_answer_ns && match.user_answer_ew
+              presentation && match.user_answer_ns && match.user_answer_ew
                 ? {
                     ns: match.user_answer_ns,
                     ew: match.user_answer_ew,
                   }
                 : null,
-            cityACode: question.city_a_code,
-            cityBCode: question.city_b_code,
+            cityACode: presentation?.cityACode ?? question.city_a_code,
+            cityBCode: presentation?.cityBCode ?? question.city_b_code,
             answeredAt: match.answered_at ?? match.created_at,
           };
         })

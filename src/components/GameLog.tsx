@@ -254,7 +254,7 @@ export function GameLog() {
                                   {match.status === 'win' ? '○' : '✕'}
                                 </span>
                                 <span className="text-xs text-text-primary truncate flex-1">
-                                  {nameA} → {nameB}
+                                  {nameA} / {nameB}
                                 </span>
                                 <span className="text-text-secondary text-xs">
                                   {isQuestionOpen ? '▲' : '▼'}
@@ -269,7 +269,9 @@ export function GameLog() {
                                         {t.ui.correctAnswer}
                                       </div>
                                       <div className="text-success font-bold text-xs mt-0.5">
-                                        {formatDirection(match.correctDirection, lang)}
+                                        {match.correctDirection
+                                          ? formatDirection(match.correctDirection, lang)
+                                          : t.ui.noData}
                                       </div>
                                     </div>
                                     <div className="text-center bg-surface-light/50 rounded-lg p-2">
@@ -297,56 +299,67 @@ export function GameLog() {
                                     </span>
                                   </div>
 
-                                  {cityA && cityB && <ResultMap cityA={cityA} cityB={cityB} />}
+                                  {!match.correctDirection && (
+                                    <p className="text-text-secondary text-xs">
+                                      {lang === 'ja'
+                                        ? 'この履歴には出題時の向きが記録されていません。'
+                                        : 'Presentation order was not recorded for this answer.'}
+                                    </p>
+                                  )}
+                                  {match.correctDirection && cityA && cityB && (
+                                    <ResultMap cityA={cityA} cityB={cityB} />
+                                  )}
 
-                                  <div className="grid grid-cols-2 gap-2 mt-3">
-                                    {[
-                                      {
-                                        role: 'Target',
-                                        name: nameA,
-                                        country: countryA,
-                                        city: cityA,
-                                        wiki: wikiA,
-                                        colorClass: 'text-primary',
-                                      },
-                                      {
-                                        role: 'Origin',
-                                        name: nameB,
-                                        country: countryB,
-                                        city: cityB,
-                                        wiki: wikiB,
-                                        colorClass: 'text-secondary',
-                                      },
-                                    ].map((info) => (
-                                      <div key={info.role} className="text-center">
-                                        <span
-                                          className={`text-[10px] font-semibold ${info.colorClass}`}
-                                        >
-                                          {info.role}
-                                        </span>
-                                        <div className="text-xs font-bold text-text-primary">
-                                          {info.name}
-                                        </div>
-                                        <div className="text-[10px] text-text-secondary">
-                                          {info.country}
-                                        </div>
-                                        {info.city && (
-                                          <div className="text-[10px] text-text-secondary mt-1">
-                                            {formatCoord(info.city.lat, 'lat')} /{' '}
-                                            {formatCoord(info.city.lon, 'lon')}
+                                  {match.correctDirection && (
+                                    <div className="grid grid-cols-2 gap-2 mt-3">
+                                      {[
+                                        {
+                                          role: 'Target',
+                                          name: nameA,
+                                          country: countryA,
+                                          city: cityA,
+                                          wiki: wikiA,
+                                          colorClass: 'text-primary',
+                                        },
+                                        {
+                                          role: 'Origin',
+                                          name: nameB,
+                                          country: countryB,
+                                          city: cityB,
+                                          wiki: wikiB,
+                                          colorClass: 'text-secondary',
+                                        },
+                                      ].map((info) => (
+                                        <div key={info.role} className="text-center">
+                                          <span
+                                            className={`text-[10px] font-semibold ${info.colorClass}`}
+                                          >
+                                            {info.role}
+                                          </span>
+                                          <div className="text-xs font-bold text-text-primary">
+                                            {info.name}
                                           </div>
-                                        )}
-                                        <a
-                                          href={info.wiki}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-[10px] text-primary hover:text-cyan-300 transition-colors underline mt-1 inline-block"
-                                        >
-                                          Wikipedia
-                                        </a>
-                                      </div>
-                                    ))}
-                                  </div>
+                                          <div className="text-[10px] text-text-secondary">
+                                            {info.country}
+                                          </div>
+                                          {info.city && (
+                                            <div className="text-[10px] text-text-secondary mt-1">
+                                              {formatCoord(info.city.lat, 'lat')} /{' '}
+                                              {formatCoord(info.city.lon, 'lon')}
+                                            </div>
+                                          )}
+                                          <a
+                                            href={info.wiki}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] text-primary hover:text-cyan-300 transition-colors underline mt-1 inline-block"
+                                          >
+                                            Wikipedia
+                                          </a>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

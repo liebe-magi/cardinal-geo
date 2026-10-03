@@ -283,6 +283,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             dbQuestion.rating,
             localRating.rd,
             localRating.vol,
+            question,
           );
 
           if (matchId) {
