@@ -144,12 +144,19 @@ export function FinalResult() {
   const totalRatingChange = gameState.totalRatingChange;
   const isRatedGame = gameState.mode !== 'learning';
   const ratingBefore = gameState.ratingBefore;
-  const ratingAfter = ratingBefore !== undefined ? ratingBefore + totalRatingChange : undefined;
+  const ratingAfter = gameState.ratingAfter;
 
   return (
     <>
       <Header />
       <div className="glass-card p-5 sm:p-8 animate-fade-in">
+        {isRatedGame && (ratingBefore === undefined || ratingAfter === undefined) && (
+          <p className="text-text-secondary text-center">
+            {lang === 'ja'
+              ? 'この結果には開始前・終了後のレート記録がありません。'
+              : 'Before/after rating records are unavailable for this result.'}
+          </p>
+        )}
         <h2 className="text-xl sm:text-2xl font-bold text-center mb-2 text-text-primary">
           {titleText}
         </h2>

@@ -1,4 +1,4 @@
-import { beforeEach, expect, mock, test } from 'bun:test';
+import { beforeEach, afterEach, expect, mock, test, setSystemTime } from 'bun:test';
 import { INITIAL_RATING } from '../src/lib/glicko2';
 import { DEFAULT_CITY_RATING } from '../src/lib/compositeRating';
 import { normalizePair } from '../src/lib/quiz';
@@ -13,6 +13,7 @@ const persistAnswer = async (_id, correct, answer, rating, _pair, change) => {
     status: correct ? 'win' : 'lose',
     user_answer_ns: answer.ns,
     user_answer_ew: answer.ew,
+    user_rating_before: rating.rating - change,
     user_rating_after: rating.rating,
     user_rd_after: rating.rd,
     user_vol_after: rating.vol,
@@ -22,6 +23,7 @@ const persistAnswer = async (_id, correct, answer, rating, _pair, change) => {
 };
 const submitRatedAnswer = mock(persistAnswer);
 const saveDailyProgress = mock(async () => ({}));
+const getDailyProgress = mock(async () => null);
 const getMatchForRecovery = mock(async () => savedMatch);
 mock.module('../src/lib/supabase', () => ({ supabase: null }));
 mock.module('../src/lib/supabaseApi', () => ({
@@ -47,7 +49,7 @@ mock.module('../src/lib/supabaseApi', () => ({
     cityA: { countryCode: 'AA', ...DEFAULT_CITY_RATING },
     cityB: { countryCode: 'BB', ...DEFAULT_CITY_RATING },
   }),
-  getDailyProgress: async () => null,
+  getDailyProgress,
   saveDailyProgress,
   updateBestSurvivalRatedScore: async () => true,
   updateWeaknessScoreDb: async () => null,
@@ -57,6 +59,8 @@ const { useGameStore } = await import('../src/stores/gameStore');
 const { useAuthStore } = await import('../src/stores/authStore');
 
 beforeEach(() => {
+  getDailyProgress.mockReset();
+  getDailyProgress.mockImplementation(async () => null);
   createPendingMatch.mockClear();
   submitRatedAnswer.mockReset();
   submitRatedAnswer.mockImplementation(persistAnswer);
@@ -180,4 +184,58 @@ test('duplicate submit while a read is pending is ignored and read failure permi
   expect(submitRatedAnswer).toHaveBeenCalledTimes(0);
   await useGameStore.getState().submitAnswer();
   expect(useGameStore.getState().gameState.score).toBe(1);
+});
+
+afterEach(() => setSystemTime());
+
+test('five answers survive resume, ten survive review, and date stays fixed at UTC midnight', async () => {
+  setSystemTime(new Date('2026-10-03T23:50:00Z'));
+  let progress = null;
+  getDailyProgress.mockImplementation(async () => progress);
+  saveDailyProgress.mockImplementation(async (date, score, count, answers, change, completed) => {
+    progress = {
+      challenge_date: date,
+      score,
+      current_question: count,
+      answers,
+      total_rating_change: change,
+      status: completed ? 'completed' : 'in_progress',
+    };
+    return progress;
+  });
+  const answer = async () => {
+    useGameStore.getState().setUserGuess(useGameStore.getState().currentQuestion.correctDirection);
+    await useGameStore.getState().submitAnswer();
+  };
+  await useGameStore.getState().startGame('challenge', 'rated');
+  for (let i = 0; i < 5; i++) {
+    await answer();
+    if (i < 4) await useGameStore.getState().nextQuestion();
+  }
+  const firstFive = structuredClone(progress.answers);
+  const rating = useGameStore.getState().gameState.currentPlayerRating;
+  useAuthStore.setState({
+    profile: { ...useAuthStore.getState().profile, modeRatings: { global: rating } },
+  });
+  useGameStore.getState().reset();
+  await useGameStore.getState().startGame('challenge', 'rated');
+  expect(useGameStore.getState().gameState.questionHistory).toHaveLength(5);
+  expect(useGameStore.getState().gameState.ratingBefore).toBe(1500);
+  setSystemTime(new Date('2026-10-04T00:01:00Z'));
+  for (let i = 5; i < 10; i++) {
+    await answer();
+    if (i < 9) await useGameStore.getState().nextQuestion();
+  }
+  expect(progress.challenge_date).toBe('2026-10-03');
+  expect(progress.answers).toHaveLength(10);
+  expect(progress.answers.slice(0, 5)).toEqual(firstFive);
+  expect(progress.score).toBe(10);
+  const completed = useGameStore.getState().gameState;
+  setSystemTime(new Date('2026-10-03T23:59:00Z'));
+  await useGameStore.getState().reviewDailyResult();
+  const review = useGameStore.getState().gameState;
+  expect(review.questionHistory).toEqual(completed.questionHistory);
+  expect(review.ratingBefore).toBe(completed.ratingBefore);
+  expect(review.ratingAfter).toBe(completed.ratingAfter);
+  expect(review.totalRatingChange).toBeCloseTo(review.ratingAfter - review.ratingBefore, 8);
 });

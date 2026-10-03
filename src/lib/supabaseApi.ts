@@ -357,6 +357,7 @@ export async function submitRatedAnswer(
  */
 export async function getDailyProgress(
   challengeDate: string,
+  strict = false,
 ): Promise<DbDailyChallengeResult | null> {
   if (!supabase) return null;
 
@@ -365,6 +366,7 @@ export async function getDailyProgress(
   });
 
   if (error) {
+    if (strict) throw error;
     console.error('Error getting daily progress:', error);
     return null;
   }

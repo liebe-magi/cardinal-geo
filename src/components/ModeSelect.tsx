@@ -19,6 +19,7 @@ export function ModeSelect() {
   const pendingSettledCount = useGameStore((s) => s.pendingSettledCount);
   const navigate = useNavigate();
   const [isStarting, setIsStarting] = useState(false);
+  const [startError, setStartError] = useState(false);
   const [showUpdateRequired, setShowUpdateRequired] = useState(false);
   const [isMaintenance, setIsMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
@@ -145,9 +146,15 @@ export function ModeSelect() {
     }
 
     setIsStarting(true);
-    await startGame(mode, subMode);
-    setIsStarting(false);
-    navigate('/quiz');
+    setStartError(false);
+    try {
+      await startGame(mode, subMode);
+      navigate('/quiz');
+    } catch {
+      setStartError(true);
+    } finally {
+      setIsStarting(false);
+    }
   };
 
   const getModeRating = (modeKey: 'global' | 'starter_rated' | `${Region}_rated`): number => {
@@ -195,6 +202,13 @@ export function ModeSelect() {
         </div>
       )}
       <Header />
+      {startError && (
+        <p role="alert">
+          {lang === 'ja'
+            ? '保存済みの進捗を確認できませんでした。もう一度開始してください。'
+            : 'Could not verify saved progress. Please try starting again.'}
+        </p>
+      )}
       <div className="animate-fade-in space-y-5">
         {/* Hero rating card */}
         {isAuthenticated && profile && (
@@ -292,6 +306,8 @@ export function ModeSelect() {
                 const success = await useGameStore.getState().reviewDailyResult();
                 if (success) {
                   navigate('/result/final', { replace: true });
+                } else {
+                  setStartError(true);
                 }
               } else {
                 handleStart('challenge', 'rated');

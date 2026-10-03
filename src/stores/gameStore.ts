@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { calculateCityRatingUpdate, calculateCompositeOpponent } from '../lib/compositeRating';
 import { generateDailyChallengeQuestions } from '../lib/dailyChallenge';
+import { restoreDailyProgress } from '../lib/dailyProgress';
 import { calculateNewRatings, type GlickoRating } from '../lib/glicko2';
 import { checkAnswer, generateLearningQuestion, generateQuestion } from '../lib/quiz';
 import { getUTCDateString } from '../lib/seededRandom';
@@ -124,6 +125,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startGame: async (mode: GameMode, subMode: GameSubMode) => {
+    const selectedDate = getUTCDateString();
     const gameState = createInitialGameState(mode, subMode);
     const authState = useAuthStore.getState();
     // All modes are rated except learning
@@ -167,27 +169,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     let dailyQuestions: Question[] = [];
     let dailyDateStr = '';
     if (mode === 'challenge' && subMode === 'rated') {
-      dailyDateStr = getUTCDateString();
+      dailyDateStr = selectedDate;
       dailyQuestions = generateDailyChallengeQuestions(dailyDateStr);
 
       // Check for existing progress to resume
       if (authState.isAuthenticated) {
-        const progress = await getDailyProgress(dailyDateStr);
+        const progress = await getDailyProgress(dailyDateStr, true);
         if (progress && progress.status === 'completed') {
           // Already completed today — don't allow replay
           return;
         }
         if (progress && progress.current_question > 0) {
           // Resume from where we left off
-          gameState.questionCount = progress.current_question;
-          gameState.score = progress.score;
-          gameState.totalRatingChange = progress.total_rating_change;
-          // Restore answers from DB
-          if (Array.isArray(progress.answers)) {
-            gameState.history = progress.answers.map(
-              (a: unknown) => (a as { isCorrect: boolean }).isCorrect,
-            );
-          }
+          Object.assign(gameState, restoreDailyProgress(progress));
         }
       }
     }
@@ -204,6 +198,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       currentDbQuestion: null,
       isProcessing: false,
       pendingSettledCount: 0,
+      error: null,
+      answerAttempt: null,
     });
 
     // Generate first question
@@ -473,6 +469,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           throw new Error('Answer not confirmed');
         ratingChange = saved.rating_change;
         record.ratingChange = ratingChange;
+        record.ratingBefore = saved.user_rating_before;
+        record.ratingAfter = saved.user_rating_after;
         newPlayerRating = {
           rating: saved.user_rating_after,
           rd: saved.user_rd_after,
@@ -506,6 +504,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           isCorrect: r.isCorrect,
           isPartialCorrect: r.isPartialCorrect,
           ratingChange: r.ratingChange,
+          ratingBefore: r.ratingBefore,
+          ratingAfter: r.ratingAfter,
           userAnswer: r.userAnswer,
           correctDirection: r.correctDirection,
           cityACode: r.cityA.countryCode,
@@ -570,6 +570,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
           history: newHistory,
           questionHistory: newQuestionHistory,
           totalRatingChange: newTotalRatingChange,
+          ratingAfter: record.ratingAfter,
+          ratingBefore:
+            gameState.questionCount === 0 ? record.ratingBefore : gameState.ratingBefore,
         },
         isShowingResult: true,
         lastAnswerResult: { isCorrect, isPartialCorrect, ratingChange },
@@ -595,55 +598,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // Attempt to load today's progress
     const dateStr = getUTCDateString();
-    const progress = await getDailyProgress(dateStr);
+    let progress;
+    try {
+      progress = await getDailyProgress(dateStr, true);
+    } catch {
+      set({ isProcessing: false, error: 'daily' });
+      return false;
+    }
 
     if (!progress || progress.status !== 'completed' || !progress.answers) {
       set({ isProcessing: false });
       return false;
     }
 
-    // Dynamically import cities to reconstruct the history
-    const { cities } = await import('../cities');
-
-    // We recreate the state necessary for FinalResult to display
-    const reconstructedHistory: boolean[] = [];
-    const reconstructedQuestionHistory: GameState['questionHistory'] = [];
-
-    for (const item of progress.answers) {
-      const ans = item as Record<string, unknown>;
-      const cityA = cities.find((c) => c.countryCode === ans.cityACode);
-      const cityB = cities.find((c) => c.countryCode === ans.cityBCode);
-
-      if (!cityA || !cityB) {
-        console.error('Invalid daily progress data: city code not found', {
-          cityACode: ans.cityACode,
-          cityBCode: ans.cityBCode,
-        });
-        set({ isProcessing: false });
-        return false;
-      }
-
-      const isCorrect = Boolean(ans.isCorrect);
-      reconstructedHistory.push(isCorrect);
-      reconstructedQuestionHistory.push({
-        isCorrect: ans.isCorrect as boolean,
-        isPartialCorrect: ans.isPartialCorrect as boolean | undefined,
-        ratingChange: ans.ratingChange as number | undefined,
-        userAnswer: ans.userAnswer as QuadDirection,
-        correctDirection: ans.correctDirection as QuadDirection,
-        cityA,
-        cityB,
-      });
+    let restored: ReturnType<typeof restoreDailyProgress>;
+    try {
+      restored = restoreDailyProgress(progress);
+    } catch {
+      set({ isProcessing: false, error: 'daily' });
+      return false;
     }
 
     set({
       gameState: {
         mode: 'challenge',
         subMode: 'rated',
-        score: progress.score,
-        questionCount: progress.current_question,
-        history: reconstructedHistory,
-        questionHistory: reconstructedQuestionHistory,
+        ...restored,
         isGameOver: true,
         sessionId: '', // Not needed for review
         totalRatingChange: progress.total_rating_change,

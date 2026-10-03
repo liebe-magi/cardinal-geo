@@ -15,12 +15,14 @@
       "ja": [
         "問題や回答の保存に失敗した場合に再試行を表示",
         "デイリーの進捗保存を待ってから結果を表示",
-        "回答ボタンの連打による重複処理を防止"
+        "回答ボタンの連打による重複処理を防止",
+        "デイリーを途中から再開しても回答履歴が残り、保存されたレートを結果に表示"
       ],
       "en": [
         "Added retries when a question or answer cannot be saved",
         "Wait for daily progress to be saved before displaying results",
-        "Prevented duplicate processing from repeated answer submissions"
+        "Prevented duplicate processing from repeated answer submissions",
+        "Keep answer history when resuming a daily challenge and display saved result ratings"
       ]
     }
   },

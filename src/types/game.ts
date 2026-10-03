@@ -21,6 +21,8 @@ export interface QuestionRecord {
   userAnswer: QuadDirection;
   isCorrect: boolean;
   ratingChange?: number;
+  ratingBefore?: number;
+  ratingAfter?: number;
   /** True if one axis (NS or EW) matched */
   isPartialCorrect?: boolean;
 }
@@ -41,6 +43,7 @@ export interface GameState {
   totalRatingChange: number;
   /** User's rating at the start of this rated session */
   ratingBefore?: number;
+  ratingAfter?: number;
   /** Locally-chained player rating within the session (avoids stale fetchProfile reads) */
   currentPlayerRating?: GlickoRating;
 }
