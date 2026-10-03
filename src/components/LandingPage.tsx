@@ -49,7 +49,8 @@ export function LandingPage() {
   };
 
   const handleNextQuestion = async () => {
-    await nextQuestion();
+    if (lastAnswerResult && !lastAnswerResult.isCorrect) await startGame('starter', 'unrated');
+    else await nextQuestion();
     setPlayState('playing');
     setTimeout(() => {
       document

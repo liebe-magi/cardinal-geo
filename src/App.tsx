@@ -54,7 +54,7 @@ export function App() {
             }
           />
           <Route
-            path="/result/final"
+            path="/result/final/:sessionId?"
             element={
               <ProtectedRoute>
                 <FinalResult />

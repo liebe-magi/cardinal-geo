@@ -1,9 +1,11 @@
+import { ShareActions } from './ShareActions';
+import { ShareHistory } from './ShareHistory';
 import L from 'leaflet';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cities } from '../cities';
 import { regionLabels, type Region } from '../lib/regions';
-import { fetchAllModeStats, fetchRatingRank, type ModeStats } from '../lib/supabaseApi';
+import { fetchAllModeStats, fetchRatingRank, type ModeStats } from '../lib/profileApi';
 import { useAuthStore } from '../stores/authStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { Header } from './Header';
@@ -40,7 +42,6 @@ export function Profile() {
   const [editing, setEditing] = useState(false);
   const [newUsername, setNewUsername] = useState(profile?.username || '');
   const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [idCopied, setIdCopied] = useState(false);
   const [rank, setRank] = useState<{ rank: number; total: number } | null>(null);
   const [stats, setStats] = useState<{
@@ -94,41 +95,6 @@ export function Profile() {
     setIdCopied(true);
     setTimeout(() => setIdCopied(false), 2000);
   }, [profile?.id]);
-
-  const buildShareText = useCallback(() => {
-    if (!profile) return '';
-    const lines: string[] = ['🧭 Cardinal Geo', ''];
-    lines.push(`⭐ Rating: ${Math.round(profile.modeRatings?.global?.rating ?? 1500)}`);
-    if (rank) {
-      const medal = rank.rank <= 3 ? ['🥇', '🥈', '🥉'][rank.rank - 1] : '📊';
-      lines.push(`${medal} ${t.ui.ratingRank}: ${rank.rank} / ${rank.total}`);
-    }
-    if (stats) {
-      lines.push('');
-      lines.push(`⚔️ ${t.ui.statsSurvivalRated}: ${t.ui.statsBest} ${stats.survivalRated.best}`);
-      lines.push(
-        `🎯 ${t.ui.statsChallengeDaily}: ${t.ui.statsBest} ${stats.challengeDaily.best}/10 (${t.ui.statsAvg} ${stats.challengeDaily.avg})`,
-      );
-    }
-    lines.push('');
-    lines.push(`${window.location.origin}`);
-    return lines.join('\n');
-  }, [profile, rank, stats, t]);
-
-  const handleShare = useCallback(async () => {
-    const text = buildShareText();
-    if (navigator.share) {
-      try {
-        await navigator.share({ text });
-        return;
-      } catch {
-        // User cancelled or share failed, fall through to clipboard
-      }
-    }
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [buildShareText]);
 
   const initMap = useCallback(() => {
     if (!mapRef.current) return;
@@ -576,12 +542,8 @@ export function Profile() {
 
         {/* General Footer Actions */}
         <div className="space-y-3 mt-6">
-          <button
-            onClick={handleShare}
-            className="w-full py-3 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 cursor-pointer transition-all duration-200 font-semibold"
-          >
-            {copied ? `✅ ${t.ui.copied}` : `📤 ${t.ui.shareProfile}`}
-          </button>
+          <ShareActions />
+          <ShareHistory />
 
           <button
             onClick={() => navigate('/')}

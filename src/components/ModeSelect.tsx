@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { fetchAppConfig } from '../lib/appConfig';
 import { regionLabels, type Region } from '../lib/regions';
 import { getUTCDateString } from '../lib/seededRandom';
-import { fetchAllModeStats, fetchRatingRank, getDailyProgress } from '../lib/supabaseApi';
+import { fetchAllModeStats, fetchRatingRank } from '../lib/profileApi';
+import { getDailyProgress } from '../lib/legacyResults';
 import { getLatestUpdateNote } from '../lib/updates';
 import { useAuthStore } from '../stores/authStore';
 import { useGameStore } from '../stores/gameStore';
@@ -305,7 +306,10 @@ export function ModeSelect() {
               if (dailyStatus === 'completed') {
                 const success = await useGameStore.getState().reviewDailyResult();
                 if (success) {
-                  navigate('/result/final', { replace: true });
+                  navigate(
+                    `/result/final/${useGameStore.getState().savedResult?.session.id ?? ''}`,
+                    { replace: true },
+                  );
                 } else {
                   setStartError(true);
                 }

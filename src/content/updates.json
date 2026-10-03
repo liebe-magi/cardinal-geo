@@ -1,15 +1,15 @@
 [
   {
-    "id": "v1.0.3",
-    "version": "1.0.3",
+    "id": "v1.1.0",
+    "version": "1.1.0",
     "publishedAt": "2026-10-04",
     "title": {
-      "ja": "回答の保存と再試行を改善",
-      "en": "More reliable answer saving and retries"
+      "ja": "結果の保存・振り返りと成績共有を改善",
+      "en": "Reliable results, review, and sharing"
     },
     "summary": {
-      "ja": "通信に失敗したときに結果を確定せず、保存状況を確認して再試行できるようになりました。",
-      "en": "Results are confirmed only after saving, with retries that check whether an answer was already saved."
+      "ja": "通信が途切れても保存済みの結果を確認・再開しやすくしました。確定した成績をリンクや画像で共有できます。",
+      "en": "Saved results are easier to review and resume after a connection failure. Share confirmed stats using a link or image."
     },
     "changes": {
       "ja": [
@@ -18,7 +18,12 @@
         "回答ボタンの連打による重複処理を防止",
         "デイリーを途中から再開しても回答履歴が残り、保存されたレートを結果に表示",
         "新しい回答ではゲームログの方角と地図を出題時の向きに統一",
-        "ゲーム開始・終了時の連打や遅れた通信による画面の切り替わりを防止"
+        "ゲーム開始・終了時の連打や遅れた通信による画面の切り替わりを防止",
+        "採点と成績の反映をまとめて行い、再試行や同時回答による重複を防止",
+        "ゲームログから過去の結果を開き、スコア・レート・回答を確認可能に",
+        "古いゲームも追加で読み込めるように改善",
+        "表示名と成績だけを公開する共有リンクと画像を追加し、プロフィールから公開停止も可能に",
+        "共有をキャンセルしたときに、意図せずコピーされる問題を修正"
       ],
       "en": [
         "Added retries when a question or answer cannot be saved",
@@ -26,7 +31,12 @@
         "Prevented duplicate processing from repeated answer submissions",
         "Keep answer history when resuming a daily challenge and display saved result ratings",
         "Match directions and maps in new answer logs to the original question order",
-        "Prevented repeated start/end actions and late responses from switching the current game"
+        "Prevented repeated start/end actions and late responses from switching the current game",
+        "Apply grading and stats together to prevent duplicates from retries or simultaneous answers",
+        "Open saved games from the log to review scores, ratings, and answers",
+        "Load additional older games from the log",
+        "Added public links and images containing only display names and stats, with revocation from your profile",
+        "Prevented unintended copying when sharing is cancelled"
       ]
     }
   },

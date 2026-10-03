@@ -1,8 +1,6 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
-import { clearLocalGameData, collectLocalDataForMigration } from '../lib/storage';
 import { supabase } from '../lib/supabase';
-import { migrateLocalDataToDb } from '../lib/supabaseApi';
 
 export interface Profile {
   id: string;
@@ -169,17 +167,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const profile = { ...data, modeRatings } as Profile;
     set({ profile });
 
-    // One-time data migration: move LocalStorage game data to Supabase
-    const localData = collectLocalDataForMigration();
-    if (localData) {
-      const migrated = await migrateLocalDataToDb(user.id, localData);
-      if (migrated) {
-        clearLocalGameData();
-        // Re-fetch profile (including mode ratings) to get merged data
-        await get().fetchProfile();
-        return;
-      }
-    }
+    // Legacy local scores cannot be imported into server-authoritative ratings.
+    // Leave them in local storage; never erase or promote unverifiable results.
   },
 
   updateProfile: async (updates: Partial<Pick<Profile, 'username'>>) => {

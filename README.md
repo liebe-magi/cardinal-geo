@@ -63,3 +63,23 @@ This project can be deployed to [Vercel](https://vercel.com) with the following 
 - Vite
 - TypeScript
 - Leaflet (Map display)
+
+## Saved results and sharing / 結果保存と共有
+
+採点は認証付きサーバーRPCで確定し、結果画面とログは同じ保存済みゲームを読みます。
+公開リンクは本人の操作時だけ作成し、共有時点の成績を固定します。
+DB移行・旧クライアントの停止・Vercel Functionsの設定は
+[移行手順](docs/result-migrations.md) を確認してください。
+静的Viteサーバーだけでは `/s/` と共有画像APIは動きません。
+
+DB検証はPostgreSQL 17の空の使い捨てDBを用意して実行します。
+`PGDATABASE` は誤操作防止のため `cardinal_geo_test` で始まる名前に限定します。
+`psql` とテスト用DBへの管理接続が必要です。通常のSupabase環境では実行しないでください。
+
+```fish
+env PGHOST=localhost PGPORT=5432 PGUSER=postgres PGDATABASE=cardinal_geo_test bun run test:db
+```
+
+CIのdatabaseジョブは専用のPostgreSQLサービスで同じ手順を実行します。
+回答の原子性・権限・再試行に加え、dblinkの独立した接続で同時回答を検証します。
+[Issueごとの検証状況](docs/issue-validation.md) に、ローカルで確認済みの範囲と公開後に必要な確認を記載しています。

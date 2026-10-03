@@ -2,24 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { regionLabels } from '../../lib/regions';
-import { supabase } from '../../lib/supabase';
-import { useAuthStore } from '../../stores/authStore';
+import { getLeaderboard, type RankingTab, type RankingEntry } from '../../lib/statisticsApi';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { Header } from '../Header';
-
-type RankingTab = 'rating' | 'survival_rated' | 'daily' | 'daily_avg';
-
-interface RankingEntry {
-  id: string;
-  username: string;
-  value: number;
-  extra?: string;
-}
 
 export function Ranking() {
   const navigate = useNavigate();
   const { t, lang } = useSettingsStore();
-  const { profile } = useAuthStore();
   const [activeTab, setActiveTab] = useState<RankingTab>('rating');
   const [ratingMode, setRatingMode] = useState<string>('global');
   const [entries, setEntries] = useState<RankingEntry[]>([]);
@@ -27,79 +16,9 @@ export function Ranking() {
   const [dailyDate, setDailyDate] = useState(new Date().toISOString().slice(0, 10));
 
   const fetchRanking = useCallback(async () => {
-    if (!supabase) {
-      setEntries([]);
-      return;
-    }
-
     setLoading(true);
     try {
-      let data: RankingEntry[] = [];
-
-      switch (activeTab) {
-        case 'rating': {
-          const { data: results } = await supabase.rpc('get_rating_ranking', {
-            p_mode: ratingMode,
-          });
-          data =
-            results?.map(
-              (r: { id: string; username: string; rating: number; play_count: number }) => ({
-                id: r.id,
-                username: r.username || '???',
-                value: Math.round(r.rating),
-                extra: String(r.play_count),
-              }),
-            ) || [];
-          break;
-        }
-        case 'survival_rated': {
-          const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, username, best_score_survival_rated')
-            .order('best_score_survival_rated', { ascending: false })
-            .gt('best_score_survival_rated', 0)
-            .limit(100);
-          data =
-            profiles?.map((p) => ({
-              id: p.id,
-              username: p.username || '???',
-              value: p.best_score_survival_rated,
-            })) || [];
-          break;
-        }
-
-        case 'daily': {
-          const { data: results } = await supabase
-            .from('daily_challenge_results')
-            .select('user_id, score, profiles!inner(username)')
-            .eq('challenge_date', dailyDate)
-            .eq('status', 'completed')
-            .order('score', { ascending: false })
-            .limit(100);
-          data =
-            results?.map((r) => ({
-              id: r.user_id,
-              username: (r.profiles as unknown as { username: string })?.username || '???',
-              value: r.score,
-            })) || [];
-          break;
-        }
-
-        case 'daily_avg': {
-          const { data: results } = await supabase.rpc('get_daily_average_ranking');
-          data =
-            results?.map(
-              (r: { id: string; username: string; rating: number; play_count: number }) => ({
-                id: r.id,
-                username: r.username || '???',
-                value: r.rating,
-                extra: String(r.play_count),
-              }),
-            ) || [];
-          break;
-        }
-      }
-
+      const data = await getLeaderboard(activeTab, ratingMode, dailyDate);
       setEntries(data);
     } catch (err) {
       console.error('Error fetching ranking:', err);
@@ -211,9 +130,7 @@ export function Ranking() {
             <div className="animate-pulse">{t.ui.loading}</div>
           </div>
         ) : entries.length === 0 ? (
-          <div className="text-center text-text-secondary py-12">
-            {supabase ? t.ui.noResults : 'Supabase not configured'}
-          </div>
+          <div className="text-center text-text-secondary py-12">{t.ui.noResults}</div>
         ) : (
           <div className="max-h-[28rem] overflow-y-auto rounded-xl border border-white/5">
             <table className="w-full text-sm">
@@ -235,7 +152,7 @@ export function Ranking() {
               </thead>
               <tbody>
                 {entries.map((entry, i) => {
-                  const isMe = profile?.id === entry.id;
+                  const isMe = entry.is_self;
                   return (
                     <tr
                       key={entry.id}

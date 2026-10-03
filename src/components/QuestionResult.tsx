@@ -65,7 +65,12 @@ export function QuestionResult() {
   const handleNext = async () => {
     await nextQuestion();
     const phase = useGameStore.getState().phase;
-    navigate(phase === 'completed' ? '/result/final' : '/quiz', { replace: true });
+    navigate(
+      phase === 'completed'
+        ? `/result/final/${useGameStore.getState().savedResult?.session.id ?? ''}`
+        : '/quiz',
+      { replace: true },
+    );
   };
 
   return (

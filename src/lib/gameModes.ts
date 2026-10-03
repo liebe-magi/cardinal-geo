@@ -5,6 +5,7 @@ import { FAMOUS_CITY_CODES } from './famousCities';
 import { countryRegionMap, regionLabels, type Region } from './regions';
 
 export type GameSelection =
+  | { mode: 'starter'; subMode: 'unrated' }
   | { mode: 'learning'; subMode: 'unrated' }
   | { mode: Exclude<GameMode, 'learning'>; subMode: 'rated' };
 export type GamePhase =
@@ -61,6 +62,7 @@ export const gameModes: Record<GameMode, ModeDefinition> = {
 
 /** Legacy submode values remain readable; new games use the current valid combination. */
 export function normalizeSelection(mode: GameMode, _subMode: GameSubMode): GameSelection {
+  if (mode === 'starter' && _subMode === 'unrated') return { mode, subMode: 'unrated' };
   return mode === 'learning' ? { mode, subMode: 'unrated' } : { mode, subMode: 'rated' };
 }
 export function ratingLabel(mode: GameMode, lang: Lang): string {

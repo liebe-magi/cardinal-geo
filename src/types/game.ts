@@ -19,7 +19,7 @@ export interface QuestionRecord {
   cityA: City;
   cityB: City;
   correctDirection: QuadDirection;
-  userAnswer: QuadDirection;
+  userAnswer: QuadDirection | null;
   isCorrect: boolean;
   ratingChange?: number;
   ratingBefore?: number;

@@ -1,6 +1,6 @@
 import { cities } from '../cities';
 import type { QuadDirection, QuestionRecord } from '../types/game';
-import type { DbDailyChallengeResult } from './supabaseApi';
+import type { DbDailyChallengeResult } from './legacyResults';
 import { calculateDirection, checkAnswer } from './quiz';
 
 function direction(value: unknown): QuadDirection {

@@ -27,7 +27,9 @@ export function Quiz() {
   useEffect(() => {
     if (isShowingResult || gameState.isGameOver) {
       if (gameState.isGameOver) {
-        navigate('/result/final', { replace: true });
+        navigate(`/result/final/${useGameStore.getState().savedResult?.session.id ?? ''}`, {
+          replace: true,
+        });
       } else {
         navigate('/result', { replace: true });
       }
@@ -39,7 +41,18 @@ export function Quiz() {
       <>
         <Header />
         <div className="scene text-center">
-          <p>{t.ui.loading}</p>
+          {error ? (
+            <div role="alert">
+              <p>
+                {lang === 'ja' ? '問題を読み込めませんでした。' : 'Could not load the question.'}
+              </p>
+              <button className="submit-btn" onClick={nextQuestion} disabled={isProcessing}>
+                {t.ui.retry}
+              </button>
+            </div>
+          ) : (
+            <p>{t.ui.loading}</p>
+          )}
         </div>
       </>
     );

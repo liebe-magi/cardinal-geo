@@ -5,7 +5,7 @@ import {
   fetchRatingHistoryAggregated,
   type AggregatedCandle,
   type RatingHistoryPoint,
-} from '../lib/supabaseApi';
+} from '../lib/profileApi';
 import { useSettingsStore } from '../stores/settingsStore';
 
 type Period = 'day' | 'week' | 'month';
