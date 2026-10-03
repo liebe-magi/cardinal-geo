@@ -38,6 +38,17 @@ bun run dev
 bun run build
 ```
 
+## Checks / 検証
+
+`bun install --frozen-lockfile` で依存を揃え、`bun test`、`bun run lint`、
+`bun run build` を実行します。CIではBun 1.3.2とNode 24を使います。
+ビルドには `.env.example` の `VITE_SITE_URL` と `VITE_GA_ID` が必要です。
+CIでは公開先や計測先へ接続しないテスト用の値を指定しています。
+既存のlintの型に関する警告と、ビルドのチャンクサイズに関する警告は失敗とは区別します。
+
+方角は経度の数値比較、同緯度・同経度は北・東、部分正解は0点、
+Dailyの切り替えはUTCという現行ルールを回帰テストで固定しています。
+
 ## Deploy / デプロイ
 
 This project can be deployed to [Vercel](https://vercel.com) with the following settings:

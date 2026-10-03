@@ -5,9 +5,6 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# Lockfile
-bun.lock
-
 # Source CSV (generated cities.ts is committed instead)
 r0711world_utf8.csv
 
