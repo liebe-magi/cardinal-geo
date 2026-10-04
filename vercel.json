@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/share-image.ts": { "includeFiles": "public/fonts/**" },
+    "api/share.ts": { "includeFiles": "public/fonts/**" }
+  },
+  "rewrites": [
+    { "source": "/s/:id/image", "destination": "/api/share-image?id=:id" },
+    { "source": "/s/:id", "destination": "/api/share?id=:id" },
+    { "source": "/((?!api/|s/).*)", "destination": "/index.html" }
+  ]
+}

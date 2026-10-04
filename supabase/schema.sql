@@ -1,6 +1,6 @@
 -- Cardinal Geo: Supabase Database Schema
--- 本番DB の完全なスキーマ定義（全マイグレーション反映済み）
--- 最終更新: 2026-02-23
+-- 新規DB用の旧形式ベースライン。全マイグレーション反映済みではありません。
+-- 新規環境でも docs/result-migrations.md の20261004移行を順に適用してください。
 --
 -- ⚠️  このファイルはリファレンスドキュメントです。
 --     新規環境のセットアップには使えますが、
@@ -126,6 +126,10 @@ create table if not exists public.match_history (
   user_vol_after double precision,
   question_rating_before double precision not null,
   question_rating_after double precision,
+  presented_target_code text,
+  presented_origin_code text,
+  presented_correct_ns char(1) check (presented_correct_ns in ('N', 'S')),
+  presented_correct_ew char(1) check (presented_correct_ew in ('E', 'W')),
   user_answer_ns char(1) check (user_answer_ns in ('N', 'S')),
   user_answer_ew char(1) check (user_answer_ew in ('E', 'W')),
   opponent_rating double precision,

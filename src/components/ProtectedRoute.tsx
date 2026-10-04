@@ -6,7 +6,9 @@ import { useAuthStore } from '../stores/authStore';
  * Used to protect routes that require login (e.g., /play, /quiz, /result).
  */
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
+
+  if (isLoading) return <p role="status">Loading…</p>;
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;

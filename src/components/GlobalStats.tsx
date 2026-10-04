@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cities } from '../cities';
-import { supabase } from '../lib/supabase';
+import { getCityStatistics, getActivityStatistics } from '../lib/statisticsApi';
 import { useSettingsStore } from '../stores/settingsStore';
 import { Header } from './Header';
 
@@ -28,19 +28,11 @@ export function GlobalStats() {
   const [citySortAsc, setCitySortAsc] = useState(false);
 
   const fetchStats = useCallback(async () => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
 
     try {
       // Fetch city ratings
-      const { data: results } = await supabase
-        .from('city_ratings')
-        .select('country_code, rating, play_count')
-        .order('rating', { ascending: citySortAsc })
-        .limit(198);
+      const results = await getCityStatistics(citySortAsc);
 
       const data =
         results?.map((r: { country_code: string; rating: number; play_count: number }) => {
@@ -59,10 +51,7 @@ export function GlobalStats() {
       setEntries(data);
 
       // Fetch global activity stats
-      const { data: activityData } = await supabase.rpc('get_global_activity_stats');
-      if (activityData && activityData.length > 0) {
-        setActivityStats(activityData[0]);
-      }
+      setActivityStats(await getActivityStatistics());
     } catch (err) {
       console.error('Error fetching global stats:', err);
       setEntries([]);
@@ -143,9 +132,7 @@ export function GlobalStats() {
             <div className="animate-pulse">{t.ui.loading}</div>
           </div>
         ) : entries.length === 0 ? (
-          <div className="text-center text-text-secondary py-12">
-            {supabase ? t.ui.noResults : 'Supabase not configured'}
-          </div>
+          <div className="text-center text-text-secondary py-12">{t.ui.noResults}</div>
         ) : (
           <div className="max-h-[28rem] overflow-y-auto rounded-xl border border-white/5">
             <table className="w-full text-sm">
